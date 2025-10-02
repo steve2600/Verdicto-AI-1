@@ -58,22 +58,30 @@ export default function Landing() {
         >
           <defs>
             <linearGradient id="pathGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="rgba(120, 120, 120, 0)" />
-              <stop offset="50%" stopColor="rgba(180, 180, 180, 0.5)" />
-              <stop offset="100%" stopColor="rgba(120, 120, 120, 0)" />
+              <stop offset="0%" stopColor="rgba(192, 192, 192, 0)" />
+              <stop offset="50%" stopColor="rgba(220, 220, 220, 0.9)" />
+              <stop offset="100%" stopColor="rgba(192, 192, 192, 0)" />
             </linearGradient>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
           </defs>
           {paths.map((path) => (
             <motion.path
               key={path.id}
               d={path.d}
               stroke="url(#pathGradient)"
-              strokeWidth="0.1"
+              strokeWidth="0.3"
               fill="none"
+              filter="url(#glow)"
               initial={{ pathLength: 0, opacity: 0 }}
               animate={{
                 pathLength: [0, 1, 0],
-                opacity: [0, 0.7, 0],
+                opacity: [0, 1, 0],
               }}
               transition={{
                 duration: path.duration,
