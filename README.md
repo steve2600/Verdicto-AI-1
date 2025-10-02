@@ -1,17 +1,34 @@
+# Verdicto
+
+**Justice, Accelerated by AI**
+
+Verdicto is a futuristic, ultra-modern AI-powered legal assistant designed to accelerate justice through transparent, accessible, and unbiased analysis. The application provides AI-driven case predictions, bias detection, legal research capabilities, document management, and comprehensive analysis reports.
+
 ## Overview
 
-This project uses the following tech stack:
-- Vite
-- Typescript
-- React Router v7 (all imports from `react-router` instead of `react-router-dom`)
-- React 19 (for frontend components)
-- Tailwind v4 (for styling)
-- Shadcn UI (for UI components library)
-- Lucide Icons (for icons)
-- Convex (for backend & database)
-- Convex Auth (for authentication)
-- Framer Motion (for animations)
-- Three js (for 3d models)
+Verdicto leverages Retrieval-Augmented Generation (RAG) to provide intelligent legal analysis with explainable AI reasoning. The platform features an elegant, minimalist design with a consistent black, white, and silver color scheme, using the Inter font family throughout for a sophisticated, professional aesthetic.
+
+## Key Features
+
+- **AI Case Predictions**: Forecast legal outcomes based on historical data and precedents with confidence scores
+- **Bias Detection**: Identify and flag potential biases in AI analysis and legal reasoning
+- **Legal Research**: Access a searchable database of legal cases and precedents
+- **Document Management**: Upload, organize, and track legal documents for RAG analysis
+- **Explainable AI**: Transparent reasoning with supporting evidence snippets for each prediction
+- **Analysis Reports**: Generate and download comprehensive analysis summaries
+- **Query History**: Track and review past queries and their outcomes
+- **Citizen & Lawyer Modes**: Toggle between simplified and professional analysis views
+
+## Tech Stack
+
+- **Frontend**: Vite, TypeScript, React 19, React Router v7
+- **Styling**: Tailwind v4, Shadcn UI, Lucide Icons
+- **Animations**: Framer Motion
+- **Backend & Database**: Convex
+- **Authentication**: Convex Auth (Email OTP)
+- **3D Graphics**: Three.js
+
+## Project Structure
 
 All relevant files live in the 'src/frontend' directory.
 
@@ -28,7 +45,6 @@ The project is set up with project specific CONVEX_DEPLOYMENT and VITE_CONVEX_UR
 The convex server has a separate set of environment variables that are accessible by the convex backend.
 
 Currently, these variables include auth-specific keys: JWKS, JWT_PRIVATE_KEY, and SITE_URL.
-
 
 # Using Authentication (Important!)
 
@@ -101,7 +117,6 @@ Follow these conventions when using Shad CN components, which you should use by 
 - AVOID SHADOWS. Avoid adding any shadows to components. stick with a thin border without the shadow.
 - Avoid skeletons; instead, use the loader2 component to show a spinning loading state when loading data.
 
-
 ## Landing Pages
 
 You must always create good-looking designer-level styles to your application. 
@@ -127,7 +142,6 @@ You must add animations to components using Framer Motion. It is already install
 
 To use it, import the `motion` component from `framer-motion` and use it to wrap the component you want to animate.
 
-
 ### Other Items to animate
 - Fade in and Fade Out
 - Slide in and Slide Out animations
@@ -139,7 +153,6 @@ Animate for all components, including on landing page and app pages.
 ## Three JS Graphics
 
 Your app comes with three js by default. You can use it to create 3D graphics for landing pages, games, etc.
-
 
 ## Colors
 
@@ -214,7 +227,6 @@ The schema is defined in `src/convex/schema.ts`.
 Do not include the `_id` and `_creationTime` fields in your queries (it is included by default for each table).
 Do not index `_creationTime` as it is indexed for you. Never have duplicate indexes.
 
-
 ## Convex Actions: Using CRUD operations
 
 When running anything that involves external connections, you must use a convex action with "use node" at the top of the file.
@@ -240,7 +252,6 @@ await ctx.runMutation(internal.users.update, {
   },
 });
 ```
-
 
 ## Common Convex Mistakes To Avoid
 
