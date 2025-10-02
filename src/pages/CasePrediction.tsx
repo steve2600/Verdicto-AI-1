@@ -155,7 +155,11 @@ export default function CasePrediction() {
           className="space-y-6"
         >
           {/* Prediction Card */}
-          <Card className="glass-strong p-6 neon-glow">
+          <motion.div
+            whileHover={{ y: -8, scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          >
+            <Card className="glass-strong p-6 neon-glow hover:shadow-2xl transition-shadow duration-300">
             <div className="flex items-start gap-4 mb-4">
               <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center neon-glow">
                 <TrendingUp className="h-6 w-6 text-primary" />
@@ -271,10 +275,15 @@ export default function CasePrediction() {
                 </ScrollArea>
               </SheetContent>
             </Sheet>
-          </Card>
+            </Card>
+          </motion.div>
 
           {/* Evidence Panel */}
-          <Card className="glass-strong p-6">
+          <motion.div
+            whileHover={{ y: -8, scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          >
+            <Card className="glass-strong p-6 hover:shadow-2xl transition-shadow duration-300">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
               <FileText className="h-5 w-5" />
               Supporting Evidence
@@ -287,8 +296,9 @@ export default function CasePrediction() {
                     key={index}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="glass p-4 rounded-lg"
+                    whileHover={{ x: 4, scale: 1.02 }}
+                    transition={{ delay: index * 0.1, type: "spring", stiffness: 300 }}
+                    className="glass p-4 rounded-lg hover:bg-primary/5 cursor-pointer"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -309,7 +319,8 @@ export default function CasePrediction() {
                 );
               })}
             </div>
-          </Card>
+            </Card>
+          </motion.div>
         </motion.div>
       )}
 
