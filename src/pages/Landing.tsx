@@ -147,7 +147,8 @@ export default function Landing() {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.8 }}
-          className="text-6xl md:text-8xl font-black mb-6 text-white"
+          className="text-5xl md:text-7xl lg:text-8xl font-light tracking-tight mb-6 text-white leading-tight"
+          style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300, letterSpacing: '-0.02em' }}
         >
           Justice, Accelerated by AI
         </motion.h1>
@@ -159,7 +160,7 @@ export default function Landing() {
           transition={{ delay: 0.5, duration: 0.8 }}
           className="mb-12 px-8 py-4 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10"
         >
-          <p className="text-2xl md:text-3xl font-light text-gray-300 tracking-wide">
+          <p className="text-xl md:text-2xl font-light text-gray-300 tracking-wide" style={{ letterSpacing: '0.02em' }}>
             Transparent. Accessible. Unbiased.
           </p>
         </motion.div>
@@ -211,7 +212,8 @@ export default function Landing() {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-5xl font-bold text-center mb-16 text-white"
+            className="text-4xl md:text-5xl font-light text-center mb-16 text-white tracking-tight"
+            style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300, letterSpacing: '-0.01em' }}
           >
             Powered by Advanced AI
           </motion.h2>
@@ -247,8 +249,8 @@ export default function Landing() {
                   <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-6">
                     <feature.icon className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-2xl font-bold mb-4 text-white">{feature.title}</h3>
-                  <p className="text-gray-400 leading-relaxed">{feature.description}</p>
+                  <h3 className="text-xl font-medium mb-4 text-white tracking-tight" style={{ letterSpacing: '-0.01em' }}>{feature.title}</h3>
+                  <p className="text-base text-gray-400 leading-relaxed font-light">{feature.description}</p>
                 </div>
               </motion.div>
             ))}
@@ -266,10 +268,10 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="relative p-16 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10">
             <div className="relative">
-              <h2 className="text-5xl font-bold mb-6 text-white">
+              <h2 className="text-4xl md:text-5xl font-light mb-6 text-white tracking-tight" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300, letterSpacing: '-0.02em' }}>
                 Ready to Transform Legal Analysis?
               </h2>
-              <p className="text-xl text-gray-300 mb-8">
+              <p className="text-lg md:text-xl text-gray-300 mb-8 font-light" style={{ letterSpacing: '0.01em' }}>
                 Join the future of justice with AI-powered insights
               </p>
               <Button
