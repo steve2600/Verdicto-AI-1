@@ -50,8 +50,8 @@ createRoot(document.getElementById("root")!).render(
     <VlyToolbar />
     <InstrumentationProvider>
       <ConvexAuthProvider client={convex}>
-        <ThemeProvider>
-          <BrowserRouter>
+        <BrowserRouter>
+          <ThemeProvider>
             <RouteSyncer />
             <Routes>
               <Route path="/" element={<Landing />} />
@@ -66,9 +66,9 @@ createRoot(document.getElementById("root")!).render(
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-          <Toaster />
-        </ThemeProvider>
+            <Toaster />
+          </ThemeProvider>
+        </BrowserRouter>
       </ConvexAuthProvider>
     </InstrumentationProvider>
   </StrictMode>,
