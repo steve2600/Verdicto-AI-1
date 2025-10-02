@@ -58,7 +58,7 @@ export default function Landing() {
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(139, 92, 246, ${Math.random() * 0.5 + 0.3})`;
+        ctx.fillStyle = `rgba(147, 197, 253, ${Math.random() * 0.5 + 0.3})`;
         ctx.fill();
       });
 

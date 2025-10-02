@@ -42,40 +42,40 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* CYBERPUNK NEON THEME */
+/* SPACE THEME */
 :root {
   --radius: 0.5rem;
-  --background: oklch(0.08 0.02 265);
+  --background: oklch(0.05 0.04 260);
   --foreground: oklch(0.98 0.01 265);
   --card: oklch(0.12 0.03 265 / 0.6);
   --card-foreground: oklch(0.98 0.01 265);
   --popover: oklch(0.12 0.03 265 / 0.95);
   --popover-foreground: oklch(0.98 0.01 265);
-  --primary: oklch(0.7 0.25 285);
+  --primary: oklch(0.65 0.22 270);
   --primary-foreground: oklch(0.98 0.01 265);
-  --secondary: oklch(0.65 0.22 195);
+  --secondary: oklch(0.6 0.18 240);
   --secondary-foreground: oklch(0.98 0.01 265);
   --muted: oklch(0.15 0.03 265);
   --muted-foreground: oklch(0.6 0.05 265);
-  --accent: oklch(0.75 0.28 330);
+  --accent: oklch(0.7 0.2 290);
   --accent-foreground: oklch(0.98 0.01 265);
   --destructive: oklch(0.65 0.25 25);
   --border: oklch(0.25 0.05 265 / 0.3);
   --input: oklch(0.2 0.04 265 / 0.5);
-  --ring: oklch(0.7 0.25 285);
-  --chart-1: oklch(0.7 0.25 285);
-  --chart-2: oklch(0.65 0.22 195);
-  --chart-3: oklch(0.75 0.28 330);
+  --ring: oklch(0.65 0.22 270);
+  --chart-1: oklch(0.65 0.22 270);
+  --chart-2: oklch(0.6 0.18 240);
+  --chart-3: oklch(0.7 0.2 290);
   --chart-4: oklch(0.68 0.24 150);
   --chart-5: oklch(0.72 0.26 60);
   --sidebar: oklch(0.1 0.03 265 / 0.8);
   --sidebar-foreground: oklch(0.98 0.01 265);
-  --sidebar-primary: oklch(0.7 0.25 285);
+  --sidebar-primary: oklch(0.65 0.22 270);
   --sidebar-primary-foreground: oklch(0.98 0.01 265);
   --sidebar-accent: oklch(0.15 0.03 265);
   --sidebar-accent-foreground: oklch(0.98 0.01 265);
   --sidebar-border: oklch(0.25 0.05 265 / 0.3);
-  --sidebar-ring: oklch(0.7 0.25 285);
+  --sidebar-ring: oklch(0.65 0.22 270);
 }
 
 .dark {
@@ -153,10 +153,10 @@
 .animated-gradient {
   background: linear-gradient(
     -45deg,
-    oklch(0.08 0.02 265),
-    oklch(0.12 0.08 285),
-    oklch(0.1 0.06 195),
-    oklch(0.09 0.04 330)
+    oklch(0.05 0.06 260),
+    oklch(0.08 0.1 270),
+    oklch(0.06 0.08 240),
+    oklch(0.04 0.05 280)
   );
   background-size: 400% 400%;
   animation: gradient-shift 15s ease infinite;
