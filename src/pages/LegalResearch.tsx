@@ -25,8 +25,8 @@ export default function LegalResearch() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-4xl font-bold mb-2 neon-text">Legal Research</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-4xl md:text-5xl font-light mb-2 text-foreground tracking-tight" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300, letterSpacing: '-0.02em' }}>Legal Research</h1>
+        <p className="text-muted-foreground font-light" style={{ letterSpacing: '0.01em' }}>
           Search through our database of legal cases and precedents
         </p>
       </motion.div>

@@ -156,7 +156,7 @@ export default function Landing() {
           className="text-5xl md:text-7xl lg:text-8xl font-light tracking-tight mb-6 text-foreground leading-tight"
           style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300, letterSpacing: '-0.02em' }}
         >
-          Justice, Accelerated by AI
+          Justice Accelerated by AI
         </motion.h1>
 
         {/* Subheading */}

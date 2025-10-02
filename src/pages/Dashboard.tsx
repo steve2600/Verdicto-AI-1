@@ -53,7 +53,7 @@ export default function Dashboard() {
             <Scale className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold neon-text">LexAI</h1>
+            <h1 className="text-xl font-bold neon-text">Verdicto</h1>
             <p className="text-xs text-muted-foreground">Legal Intelligence</p>
           </div>
         </motion.div>

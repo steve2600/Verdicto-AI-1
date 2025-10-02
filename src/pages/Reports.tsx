@@ -20,8 +20,8 @@ export default function Reports() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-4xl font-bold mb-2 neon-text">Reports</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-4xl md:text-5xl font-light mb-2 text-foreground tracking-tight" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300, letterSpacing: '-0.02em' }}>Reports</h1>
+        <p className="text-muted-foreground font-light" style={{ letterSpacing: '0.01em' }}>
           Download and review your analysis reports
         </p>
       </motion.div>
