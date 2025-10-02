@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DisclaimerBanner } from "@/components/DisclaimerBanner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Dashboard() {
   const { isLoading, isAuthenticated, user, signOut } = useAuth();
@@ -106,7 +107,7 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-background">
       <div className="flex h-screen">
         {/* Desktop Sidebar */}
         <motion.aside
@@ -128,6 +129,11 @@ export default function Dashboard() {
             <SidebarContent />
           </SheetContent>
         </Sheet>
+
+        {/* Theme Toggle - Fixed Position */}
+        <div className="fixed top-4 right-4 z-50">
+          <ThemeToggle />
+        </div>
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto">
