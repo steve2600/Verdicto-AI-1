@@ -19,29 +19,94 @@ export type Role = Infer<typeof roleValidator>;
 const schema = defineSchema(
   {
     // default auth tables using convex auth.
-    ...authTables, // do not remove or modify
+    ...authTables,
 
-    // the users table is the default users table that is brought in by the authTables
     users: defineTable({
-      name: v.optional(v.string()), // name of the user. do not remove
-      image: v.optional(v.string()), // image of the user. do not remove
-      email: v.optional(v.string()), // email of the user. do not remove
-      emailVerificationTime: v.optional(v.number()), // email verification time. do not remove
-      isAnonymous: v.optional(v.boolean()), // is the user anonymous. do not remove
+      name: v.optional(v.string()),
+      image: v.optional(v.string()),
+      email: v.optional(v.string()),
+      emailVerificationTime: v.optional(v.number()),
+      isAnonymous: v.optional(v.boolean()),
+      role: v.optional(roleValidator),
+    }).index("email", ["email"]),
 
-      role: v.optional(roleValidator), // role of the user. do not remove
-    }).index("email", ["email"]), // index for the email. do not remove or modify
+    // Legal cases for reference
+    cases: defineTable({
+      caseNumber: v.string(),
+      title: v.string(),
+      description: v.string(),
+      outcome: v.string(),
+      jurisdiction: v.string(),
+      year: v.number(),
+      category: v.string(),
+      tags: v.array(v.string()),
+    })
+      .index("by_category", ["category"])
+      .index("by_jurisdiction", ["jurisdiction"]),
 
-    // add other tables here
+    // User queries and predictions
+    queries: defineTable({
+      userId: v.id("users"),
+      queryText: v.string(),
+      uploadedFiles: v.optional(v.array(v.id("_storage"))),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("processing"),
+        v.literal("completed"),
+        v.literal("failed")
+      ),
+    }).index("by_user", ["userId"]),
 
-    // tableName: defineTable({
-    //   ...
-    //   // table fields
-    // }).index("by_field", ["field"])
+    // AI predictions and analysis
+    predictions: defineTable({
+      queryId: v.id("queries"),
+      userId: v.id("users"),
+      prediction: v.string(),
+      confidenceScore: v.number(),
+      reasoning: v.string(),
+      relatedCases: v.array(v.id("cases")),
+      biasFlags: v.array(
+        v.object({
+          type: v.string(),
+          severity: v.union(
+            v.literal("low"),
+            v.literal("medium"),
+            v.literal("high")
+          ),
+          description: v.string(),
+        })
+      ),
+      evidenceSnippets: v.array(
+        v.object({
+          caseId: v.id("cases"),
+          snippet: v.string(),
+          relevance: v.number(),
+        })
+      ),
+    })
+      .index("by_query", ["queryId"])
+      .index("by_user", ["userId"]),
+
+    // Bias analysis reports
+    biasReports: defineTable({
+      predictionId: v.id("predictions"),
+      userId: v.id("users"),
+      overallScore: v.number(),
+      categories: v.object({
+        racial: v.number(),
+        gender: v.number(),
+        socioeconomic: v.number(),
+        geographic: v.number(),
+        age: v.number(),
+      }),
+      recommendations: v.array(v.string()),
+    })
+      .index("by_prediction", ["predictionId"])
+      .index("by_user", ["userId"]),
   },
   {
     schemaValidation: false,
-  },
+  }
 );
 
 export default schema;
