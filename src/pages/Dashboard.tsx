@@ -96,7 +96,7 @@ export default function Dashboard() {
             className="w-full"
             onClick={async () => {
               await signOut();
-              navigate("/auth");
+              navigate("/");
             }}
           >
             Sign Out
