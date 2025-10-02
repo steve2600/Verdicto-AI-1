@@ -13,7 +13,7 @@ This project uses the following tech stack:
 - Framer Motion (for animations)
 - Three js (for 3d models)
 
-All relevant files live in the 'src' directory.
+All relevant files live in the 'src/frontend' directory.
 
 Use pnpm for the package manager.
 
@@ -38,13 +38,13 @@ You must follow these conventions when using authentication.
 
 All convex authentication functions are already set up. The auth currently uses email OTP and anonymous users, but can support more.
 
-The email OTP configuration is defined in `src/convex/auth/emailOtp.ts`. DO NOT MODIFY THIS FILE.
+The email OTP configuration is defined in `src/frontend/convex/auth/emailOtp.ts`. DO NOT MODIFY THIS FILE.
 
-Also, DO NOT MODIFY THESE AUTH FILES: `src/convex/auth.config.ts` and `src/convex/auth.ts`.
+Also, DO NOT MODIFY THESE AUTH FILES: `src/frontend/convex/auth.config.ts` and `src/frontend/convex/auth.ts`.
 
 ## Using Convex Auth on the backend
 
-On the `src/convex/users.ts` file, you can use the `getCurrentUser` function to get the current user's data.
+On the `src/frontend/convex/users.ts` file, you can use the `getCurrentUser` function to get the current user's data.
 
 ## Using Convex Auth on the frontend
 
