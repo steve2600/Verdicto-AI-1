@@ -40,40 +40,40 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* macOS THEME */
+/* macOS DARK THEME */
 :root {
   --radius: 10px;
-  --background: oklch(0.98 0.002 264);
-  --foreground: oklch(0.2 0.005 264);
-  --card: oklch(1 0 0 / 0.8);
-  --card-foreground: oklch(0.2 0.005 264);
-  --popover: oklch(0.99 0.001 264 / 0.95);
-  --popover-foreground: oklch(0.2 0.005 264);
-  --primary: oklch(0.55 0.22 257);
+  --background: oklch(0.22 0.005 264);
+  --foreground: oklch(0.92 0.003 264);
+  --card: oklch(0.26 0.006 264 / 0.8);
+  --card-foreground: oklch(0.92 0.003 264);
+  --popover: oklch(0.24 0.005 264 / 0.95);
+  --popover-foreground: oklch(0.92 0.003 264);
+  --primary: oklch(0.6 0.22 257);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.96 0.003 264);
-  --secondary-foreground: oklch(0.3 0.005 264);
-  --muted: oklch(0.95 0.003 264);
-  --muted-foreground: oklch(0.5 0.005 264);
-  --accent: oklch(0.55 0.22 257);
+  --secondary: oklch(0.3 0.006 264);
+  --secondary-foreground: oklch(0.88 0.003 264);
+  --muted: oklch(0.28 0.006 264);
+  --muted-foreground: oklch(0.65 0.005 264);
+  --accent: oklch(0.6 0.22 257);
   --accent-foreground: oklch(1 0 0);
   --destructive: oklch(0.58 0.22 25);
-  --border: oklch(0.88 0.003 264);
-  --input: oklch(0.95 0.003 264);
-  --ring: oklch(0.55 0.22 257 / 0.3);
-  --chart-1: oklch(0.55 0.22 257);
-  --chart-2: oklch(0.6 0.18 180);
-  --chart-3: oklch(0.65 0.2 330);
-  --chart-4: oklch(0.62 0.2 140);
-  --chart-5: oklch(0.68 0.22 60);
-  --sidebar: oklch(0.97 0.002 264 / 0.7);
-  --sidebar-foreground: oklch(0.25 0.005 264);
-  --sidebar-primary: oklch(0.55 0.22 257);
+  --border: oklch(0.32 0.006 264);
+  --input: oklch(0.28 0.006 264);
+  --ring: oklch(0.6 0.22 257 / 0.4);
+  --chart-1: oklch(0.6 0.22 257);
+  --chart-2: oklch(0.62 0.18 180);
+  --chart-3: oklch(0.68 0.2 330);
+  --chart-4: oklch(0.64 0.2 140);
+  --chart-5: oklch(0.7 0.22 60);
+  --sidebar: oklch(0.2 0.005 264 / 0.8);
+  --sidebar-foreground: oklch(0.88 0.003 264);
+  --sidebar-primary: oklch(0.6 0.22 257);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.92 0.003 264);
-  --sidebar-accent-foreground: oklch(0.25 0.005 264);
-  --sidebar-border: oklch(0.88 0.003 264 / 0.5);
-  --sidebar-ring: oklch(0.55 0.22 257 / 0.3);
+  --sidebar-accent: oklch(0.28 0.006 264);
+  --sidebar-accent-foreground: oklch(0.88 0.003 264);
+  --sidebar-border: oklch(0.32 0.006 264 / 0.5);
+  --sidebar-ring: oklch(0.6 0.22 257 / 0.4);
 }
 
 .dark {
@@ -123,7 +123,7 @@
 
 /* macOS Vibrancy & Frosted Glass */
 .macos-vibrancy {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(50, 50, 52, 0.75);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
@@ -133,11 +133,11 @@
 }
 
 .macos-card {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(58, 58, 60, 0.8);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border: 0.5px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 10px 30px rgba(0, 0, 0, 0.08);
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
 .dark .macos-card {
@@ -148,10 +148,10 @@
 
 /* macOS Sidebar */
 .macos-sidebar {
-  background: rgba(246, 246, 246, 0.8);
+  background: rgba(44, 44, 46, 0.85);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-right: 0.5px solid rgba(0, 0, 0, 0.1);
+  border-right: 0.5px solid rgba(255, 255, 255, 0.1);
 }
 
 .dark .macos-sidebar {
@@ -163,8 +163,8 @@
 .macos-window {
   background: linear-gradient(
     180deg,
-    oklch(0.99 0.001 264) 0%,
-    oklch(0.97 0.002 264) 100%
+    oklch(0.24 0.005 264) 0%,
+    oklch(0.22 0.005 264) 100%
   );
 }
 
