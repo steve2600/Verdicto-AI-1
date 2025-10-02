@@ -80,8 +80,8 @@ export default function DocumentLibrary() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-4xl font-bold mb-2 neon-text">Document Library</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-4xl md:text-5xl font-light mb-2 text-white tracking-tight" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300, letterSpacing: '-0.02em' }}>Document Library</h1>
+        <p className="text-gray-400 font-light" style={{ letterSpacing: '0.01em' }}>
           Upload and manage your legal documents for AI analysis
         </p>
       </motion.div>

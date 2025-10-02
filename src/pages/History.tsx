@@ -33,8 +33,8 @@ export default function History() {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold mb-2 neon-text">Query History</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-4xl md:text-5xl font-light mb-2 text-white tracking-tight" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300, letterSpacing: '-0.02em' }}>Query History</h1>
+            <p className="text-gray-400 font-light" style={{ letterSpacing: '0.01em' }}>
               Review your past queries and analysis results
             </p>
           </div>

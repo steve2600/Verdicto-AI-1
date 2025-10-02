@@ -91,7 +91,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] p-4">
       <div className="w-full max-w-md">
         <Card className="border-border/50 shadow-2xl backdrop-blur-xl bg-card/95">
           {step === "signIn" ? (

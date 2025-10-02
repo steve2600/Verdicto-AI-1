@@ -106,7 +106,7 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="min-h-screen animated-gradient">
+    <div className="min-h-screen bg-[#0a0a0a]">
       <div className="flex h-screen">
         {/* Desktop Sidebar */}
         <motion.aside
