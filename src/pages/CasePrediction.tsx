@@ -15,6 +15,8 @@ import {
   FileText,
   TrendingUp,
   Info,
+  User,
+  Briefcase,
 } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -35,6 +37,7 @@ export default function CasePrediction() {
   const [queryText, setQueryText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentQueryId, setCurrentQueryId] = useState<Id<"queries"> | null>(null);
+  const [userMode, setUserMode] = useState<"citizen" | "lawyer">("citizen");
 
   const createQuery = useMutation(api.queries.create);
   const mockAnalysis = useMutation(api.predictions.mockAnalysis);
@@ -155,6 +158,33 @@ export default function CasePrediction() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
+          {/* Mode Toggle */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex justify-end"
+          >
+            <Card className="macos-card p-2 inline-flex items-center gap-2">
+              <Button
+                variant={userMode === "citizen" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setUserMode("citizen")}
+                className="gap-2"
+              >
+                <User className="h-4 w-4" />
+                Citizen Mode
+              </Button>
+              <Button
+                variant={userMode === "lawyer" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setUserMode("lawyer")}
+                className="gap-2"
+              >
+                <Briefcase className="h-4 w-4" />
+                Lawyer Mode
+              </Button>
+            </Card>
+          </motion.div>
           {/* Prediction Card */}
           <motion.div
             whileHover={{ y: -8, scale: 1.02 }}
