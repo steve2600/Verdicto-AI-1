@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export default function Dashboard() {
-  const { isLoading, isAuthenticated, user } = useAuth();
+  const { isLoading, isAuthenticated, user, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("prediction");
 
@@ -83,9 +83,20 @@ export default function Dashboard() {
       <div className="p-4 border-t border-border/50">
         <div className="glass-strong rounded-lg p-4">
           <p className="text-sm font-medium mb-1">{user.name || user.email || "User"}</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground mb-3">
             {user.role || "Member"}
           </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={async () => {
+              await signOut();
+              navigate("/auth");
+            }}
+          >
+            Sign Out
+          </Button>
         </div>
       </div>
     </div>
