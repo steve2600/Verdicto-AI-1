@@ -1,24 +1,24 @@
+import { useEffect, useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { Scale, Shield, Sparkles, Zap, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
-import { Scale, Shield, Zap, ArrowRight, Sparkles } from "lucide-react";
-import { useEffect, useRef } from "react";
 
 export default function Landing() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end start"],
-  });
+  const { scrollY } = useScroll();
 
-  const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
-  const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+  // Parallax effects
+  const heroY = useTransform(scrollY, [0, 500], [0, 150]);
+  const heroOpacity = useTransform(scrollY, [0, 300], [1, 0]);
+  const featuresY = useTransform(scrollY, [200, 600], [100, 0]);
+  const featuresOpacity = useTransform(scrollY, [200, 500], [0, 1]);
 
   useEffect(() => {
-    const canvas = document.getElementById("particles") as HTMLCanvasElement;
+    const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
@@ -27,43 +27,106 @@ export default function Landing() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
+    // Particle system for liquid glass effect
     const particles: Array<{
       x: number;
       y: number;
       vx: number;
       vy: number;
       size: number;
+      opacity: number;
+      hue: number;
     }> = [];
 
-    for (let i = 0; i < 100; i++) {
+    // Create flowing neon particles
+    for (let i = 0; i < 150; i++) {
       particles.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
         vx: (Math.random() - 0.5) * 0.5,
         vy: (Math.random() - 0.5) * 0.5,
-        size: Math.random() * 2 + 1,
+        size: Math.random() * 3 + 1,
+        opacity: Math.random() * 0.5 + 0.3,
+        hue: Math.random() * 60 + 200, // Blue to cyan range
       });
     }
 
-    function animate() {
-      if (!ctx || !canvas) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let animationId: number;
 
-      particles.forEach((p) => {
-        p.x += p.vx;
-        p.y += p.vy;
+    const animate = () => {
+      ctx.fillStyle = "rgba(15, 15, 20, 0.1)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+      // Draw connections between nearby particles (liquid glass effect)
+      particles.forEach((p1, i) => {
+        particles.slice(i + 1).forEach((p2) => {
+          const dx = p1.x - p2.x;
+          const dy = p1.y - p2.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
 
+          if (distance < 120) {
+            ctx.beginPath();
+            ctx.strokeStyle = `hsla(${p1.hue}, 80%, 60%, ${
+              (1 - distance / 120) * 0.2
+            })`;
+            ctx.lineWidth = 0.5;
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        });
+      });
+
+      // Draw and update particles
+      particles.forEach((particle) => {
+        // Neon glow effect
+        const gradient = ctx.createRadialGradient(
+          particle.x,
+          particle.y,
+          0,
+          particle.x,
+          particle.y,
+          particle.size * 3
+        );
+        gradient.addColorStop(0, `hsla(${particle.hue}, 100%, 70%, ${particle.opacity})`);
+        gradient.addColorStop(0.5, `hsla(${particle.hue}, 100%, 50%, ${particle.opacity * 0.5})`);
+        gradient.addColorStop(1, `hsla(${particle.hue}, 100%, 30%, 0)`);
+
+        ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(147, 197, 253, ${Math.random() * 0.5 + 0.3})`;
+        ctx.arc(particle.x, particle.y, particle.size * 3, 0, Math.PI * 2);
         ctx.fill();
+
+        // Core particle
+        ctx.fillStyle = `hsla(${particle.hue}, 100%, 80%, ${particle.opacity})`;
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Update position with flowing motion
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+
+        // Wrap around edges
+        if (particle.x < 0) particle.x = canvas.width;
+        if (particle.x > canvas.width) particle.x = 0;
+        if (particle.y < 0) particle.y = canvas.height;
+        if (particle.y > canvas.height) particle.y = 0;
+
+        // Subtle wave motion
+        particle.vx += (Math.random() - 0.5) * 0.02;
+        particle.vy += (Math.random() - 0.5) * 0.02;
+
+        // Limit velocity
+        const speed = Math.sqrt(particle.vx ** 2 + particle.vy ** 2);
+        if (speed > 1) {
+          particle.vx = (particle.vx / speed) * 1;
+          particle.vy = (particle.vy / speed) * 1;
+        }
       });
 
-      requestAnimationFrame(animate);
-    }
+      animationId = requestAnimationFrame(animate);
+    };
 
     animate();
 
@@ -73,220 +136,259 @@ export default function Landing() {
     };
 
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+
+    return () => {
+      cancelAnimationFrame(animationId);
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
+  const handleCTA = () => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    } else {
+      navigate("/auth");
+    }
+  };
+
   return (
-    <div ref={containerRef} className="min-h-screen overflow-x-hidden">
-      {/* Animated Background */}
-      <div className="fixed inset-0 animated-gradient -z-10" />
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#0a0a0f] via-[#0f0f1a] to-[#1a1a2e]">
+      {/* Animated Background Canvas */}
       <canvas
-        id="particles"
-        className="fixed inset-0 -z-10 opacity-60"
+        ref={canvasRef}
+        className="fixed inset-0 w-full h-full"
+        style={{ zIndex: 0 }}
+      />
+
+      {/* Holographic Grid Overlay */}
+      <div
+        className="fixed inset-0 opacity-10"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(96, 165, 250, 0.3) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(96, 165, 250, 0.3) 1px, transparent 1px)
+          `,
+          backgroundSize: "50px 50px",
+          zIndex: 1,
+        }}
       />
 
       {/* Hero Section */}
       <motion.section
-        style={{ y, opacity }}
-        className="min-h-screen flex flex-col items-center justify-center px-4 relative"
+        style={{ y: heroY, opacity: heroOpacity }}
+        className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 text-center"
       >
+        {/* Floating Legal Icons */}
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-center max-w-5xl mx-auto"
+          animate={{
+            y: [0, -20, 0],
+            rotate: [0, 5, 0],
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute top-20 left-[10%] opacity-20"
         >
-          {/* Logo */}
-          <motion.div
-            initial={{ y: -50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="mb-8 flex justify-center"
-          >
-            <div className="w-24 h-24 rounded-2xl bg-primary/20 flex items-center justify-center neon-glow">
-              <Scale className="h-12 w-12 text-primary" />
-            </div>
-          </motion.div>
+          <Shield className="w-24 h-24 text-cyan-400" />
+        </motion.div>
 
-          {/* Main Headline */}
-          <motion.h1
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="text-6xl md:text-8xl font-bold mb-6 neon-text leading-tight"
-          >
-            Justice, Accelerated
-            <br />
-            <span className="text-primary">by AI</span>
-          </motion.h1>
+        <motion.div
+          animate={{
+            y: [0, 20, 0],
+            rotate: [0, -5, 0],
+          }}
+          transition={{
+            duration: 5,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute top-32 right-[15%] opacity-20"
+        >
+          <Zap className="w-20 h-20 text-blue-400" />
+        </motion.div>
 
-          {/* Subheading */}
-          <motion.p
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto"
-          >
+        {/* Logo with Holographic Effect */}
+        <motion.div
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ duration: 1, type: "spring", stiffness: 100 }}
+          className="mb-8 relative"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 rounded-full blur-3xl opacity-50 animate-pulse" />
+          <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-cyan-400/20 to-blue-600/20 backdrop-blur-xl border border-cyan-400/30 flex items-center justify-center shadow-2xl shadow-cyan-500/50">
+            <Scale className="w-12 h-12 text-cyan-300" />
+          </div>
+        </motion.div>
+
+        {/* Main Headline with Neon Glow */}
+        <motion.h1
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.8 }}
+          className="text-6xl md:text-8xl font-black mb-6 relative"
+          style={{
+            background: "linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #ec4899 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            textShadow: "0 0 80px rgba(96, 165, 250, 0.5)",
+          }}
+        >
+          Justice, Accelerated by AI
+        </motion.h1>
+
+        {/* Subheading with Glass Effect */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.8 }}
+          className="mb-12 px-8 py-4 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl"
+        >
+          <p className="text-2xl md:text-3xl font-light text-cyan-100 tracking-wide">
             Transparent. Accessible. Unbiased.
-          </motion.p>
+          </p>
+        </motion.div>
 
-          {/* CTA Button */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.8 }}
+        {/* CTA Button with Neon Glow */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.7, duration: 0.5 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Button
+            onClick={handleCTA}
+            size="lg"
+            className="relative px-12 py-6 text-xl font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-full shadow-2xl shadow-cyan-500/50 border-2 border-cyan-400/50 overflow-hidden group"
           >
-            <Button
-              size="lg"
-              onClick={() => navigate(isAuthenticated ? "/dashboard" : "/auth")}
-              className="text-lg px-8 py-6 neon-glow group"
-            >
+            <span className="relative z-10">
               {isAuthenticated ? "Open Dashboard" : "Enter Platform"}
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </motion.div>
-
-          {/* Floating Elements */}
-          <motion.div
-            animate={{
-              y: [0, -20, 0],
-            }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-            className="absolute top-1/4 left-10 hidden lg:block"
-          >
-            <div className="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center neon-glow">
-              <Shield className="h-8 w-8 text-secondary" />
-            </div>
-          </motion.div>
-
-          <motion.div
-            animate={{
-              y: [0, 20, 0],
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 1,
-            }}
-            className="absolute top-1/3 right-10 hidden lg:block"
-          >
-            <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center neon-glow">
-              <Zap className="h-10 w-10 text-accent" />
-            </div>
-          </motion.div>
+            </span>
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <motion.div
+              className="absolute inset-0 bg-white/20"
+              animate={{
+                x: ["-100%", "100%"],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+            />
+          </Button>
         </motion.div>
 
         {/* Scroll Indicator */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="absolute bottom-10"
+          transition={{ delay: 1.5 }}
+          className="absolute bottom-12"
         >
           <motion.div
             animate={{ y: [0, 10, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="w-6 h-10 border-2 border-primary/50 rounded-full flex items-start justify-center p-2"
+            transition={{ duration: 2, repeat: Infinity }}
+            className="flex flex-col items-center gap-2 text-cyan-300/60"
           >
-            <motion.div className="w-1 h-2 bg-primary rounded-full" />
+            <span className="text-sm font-light">Scroll to explore</span>
+            <ChevronDown className="w-6 h-6" />
           </motion.div>
         </motion.div>
       </motion.section>
 
-      {/* Features Section */}
-      <section className="min-h-screen flex items-center justify-center px-4 py-20">
-        <div className="max-w-6xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
+      {/* Features Section with Glassmorphism */}
+      <motion.section
+        style={{ y: featuresY, opacity: featuresOpacity }}
+        className="relative z-10 py-32 px-4"
+      >
+        <div className="max-w-7xl mx-auto">
+          <motion.h2
+            initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-16"
+            className="text-5xl font-bold text-center mb-16 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500"
           >
-            <h2 className="text-5xl font-bold mb-4 neon-text">
-              Powered by Advanced AI
-            </h2>
-            <p className="text-xl text-muted-foreground">
-              Cutting-edge technology for legal intelligence
-            </p>
-          </motion.div>
+            Powered by Advanced AI
+          </motion.h2>
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
                 icon: Scale,
                 title: "Case Prediction",
-                description:
-                  "AI-powered analysis of legal outcomes based on historical data and precedents",
-                color: "primary",
+                description: "AI-powered analysis of legal outcomes with unprecedented accuracy",
+                color: "from-cyan-500 to-blue-500",
               },
               {
                 icon: Shield,
                 title: "Bias Detection",
-                description:
-                  "Advanced algorithms identify and flag potential biases in legal reasoning",
-                color: "secondary",
+                description: "Identify and eliminate bias for truly fair legal analysis",
+                color: "from-blue-500 to-purple-500",
               },
               {
                 icon: Sparkles,
                 title: "Explainable AI",
-                description:
-                  "Transparent reasoning and evidence-based predictions you can trust",
-                color: "accent",
+                description: "Transparent reasoning you can trust and understand",
+                color: "from-purple-500 to-pink-500",
               },
             ].map((feature, index) => (
               <motion.div
-                key={index}
+                key={feature.title}
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.2, duration: 0.6 }}
-                whileHover={{ scale: 1.05 }}
-                className="glass-strong p-8 rounded-2xl neon-glow cursor-pointer"
+                transition={{ delay: index * 0.2 }}
+                whileHover={{ y: -10, scale: 1.02 }}
+                className="group relative"
               >
-                <div
-                  className={`w-16 h-16 rounded-xl bg-${feature.color}/20 flex items-center justify-center mb-6 neon-glow`}
-                >
-                  <feature.icon className={`h-8 w-8 text-${feature.color}`} />
+                {/* Glow Effect */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} rounded-3xl blur-2xl opacity-0 group-hover:opacity-30 transition-opacity duration-500`} />
+                
+                {/* Card */}
+                <div className="relative h-full p-8 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl hover:border-white/20 transition-all duration-300">
+                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6 shadow-lg`}>
+                    <feature.icon className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-4 text-white">{feature.title}</h3>
+                  <p className="text-cyan-100/70 leading-relaxed">{feature.description}</p>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.description}</p>
               </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      {/* CTA Section */}
-      <section className="min-h-[60vh] flex items-center justify-center px-4 py-20">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="text-center max-w-3xl mx-auto"
-        >
-          <h2 className="text-5xl font-bold mb-6 neon-text">
-            Ready to Transform Legal Analysis?
-          </h2>
-          <p className="text-xl text-muted-foreground mb-8">
-            Join the future of legal intelligence with LexAI
-          </p>
-          <Button
-            size="lg"
-            onClick={() => navigate(isAuthenticated ? "/dashboard" : "/auth")}
-            className="text-lg px-8 py-6 neon-glow group"
-          >
-            {isAuthenticated ? "Go to Dashboard" : "Get Started"}
-            <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-          </Button>
-        </motion.div>
-      </section>
+      {/* Final CTA Section */}
+      <motion.section
+        initial={{ opacity: 0, scale: 0.9 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true }}
+        className="relative z-10 py-32 px-4"
+      >
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="relative p-16 rounded-3xl bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-purple-500/10 backdrop-blur-xl border border-white/10 shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-500 rounded-3xl blur-3xl opacity-20" />
+            <div className="relative">
+              <h2 className="text-5xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500">
+                Ready to Transform Legal Analysis?
+              </h2>
+              <p className="text-xl text-cyan-100/80 mb-8">
+                Join the future of justice with AI-powered insights
+              </p>
+              <Button
+                onClick={handleCTA}
+                size="lg"
+                className="px-12 py-6 text-xl font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-full shadow-2xl shadow-cyan-500/50 border-2 border-cyan-400/50"
+              >
+                {isAuthenticated ? "Go to Dashboard" : "Get Started"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </motion.section>
     </div>
   );
 }
