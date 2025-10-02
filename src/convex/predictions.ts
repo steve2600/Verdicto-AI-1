@@ -32,9 +32,16 @@ export const create = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    // Determine confidence level based on score
+    const confidenceLevel = 
+      args.confidenceScore >= 0.75 ? "high" as const :
+      args.confidenceScore >= 0.5 ? "medium" as const :
+      "low" as const;
+
     const predictionId = await ctx.db.insert("predictions", {
       ...args,
       userId,
+      confidenceLevel,
     });
 
     return predictionId;
@@ -87,12 +94,19 @@ export const mockAnalysis = mutation({
     const cases = await ctx.db.query("cases").take(3);
     const caseIds = cases.map((c) => c._id);
 
+    const confidenceScore = 0.78;
+    const confidenceLevel = 
+      confidenceScore >= 0.75 ? "high" as const :
+      confidenceScore >= 0.5 ? "medium" as const :
+      "low" as const;
+
     const predictionId = await ctx.db.insert("predictions", {
       queryId: args.queryId,
       userId,
       prediction:
         "Based on analysis of similar cases, there is a 78% likelihood of a favorable outcome. The key factors include precedent from recent technology law cases and strong constitutional arguments.",
-      confidenceScore: 0.78,
+      confidenceScore,
+      confidenceLevel,
       reasoning:
         "This prediction is based on pattern matching with 127 similar cases in our database. The primary supporting factors are: (1) Strong precedent from Tech Corp v. Privacy Alliance (2022), (2) Recent judicial trends favoring privacy protections, and (3) Clear constitutional grounds for the argument.",
       relatedCases: caseIds,

@@ -29,6 +29,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ConfidenceBadge } from "@/components/ConfidenceBadge";
 
 export default function CasePrediction() {
   const [queryText, setQueryText] = useState("");
@@ -83,7 +84,7 @@ export default function CasePrediction() {
   };
 
   return (
-    <div className="p-4 lg:p-8 max-w-7xl mx-auto">
+    <div className="p-4 lg:p-8 max-w-7xl mx-auto pb-20">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -101,7 +102,7 @@ export default function CasePrediction() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <Card className="glass-strong p-6 mb-6 neon-glow">
+        <Card className="macos-card p-6 mb-6 neon-glow">
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-2 block">
@@ -111,7 +112,7 @@ export default function CasePrediction() {
                 placeholder="Ask about a case, upload documents, or describe a legal scenario..."
                 value={queryText}
                 onChange={(e) => setQueryText(e.target.value)}
-                className="min-h-[120px] glass resize-none"
+                className="min-h-[120px] macos-vibrancy resize-none"
                 disabled={isAnalyzing}
               />
             </div>
@@ -119,7 +120,7 @@ export default function CasePrediction() {
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
-                className="glass"
+                className="macos-vibrancy"
                 disabled={isAnalyzing}
               >
                 <Upload className="h-4 w-4 mr-2" />
@@ -159,13 +160,19 @@ export default function CasePrediction() {
             whileHover={{ y: -8, scale: 1.02 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
-            <Card className="glass-strong p-6 neon-glow hover:shadow-2xl transition-shadow duration-300">
+            <Card className="macos-card p-6 neon-glow hover:shadow-2xl transition-shadow duration-300">
             <div className="flex items-start gap-4 mb-4">
               <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center neon-glow">
                 <TrendingUp className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-bold mb-2">AI Prediction</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xl font-bold">AI Prediction</h3>
+                  <ConfidenceBadge
+                    level={prediction.confidenceLevel}
+                    score={prediction.confidenceScore}
+                  />
+                </div>
                 <p className="text-muted-foreground">{prediction.prediction}</p>
               </div>
             </div>
@@ -196,7 +203,7 @@ export default function CasePrediction() {
                     {prediction.biasFlags.map((flag, index) => (
                       <div
                         key={index}
-                        className="glass p-3 rounded-lg flex items-start gap-3"
+                        className="macos-vibrancy p-3 rounded-lg flex items-start gap-3"
                       >
                         <AlertTriangle
                           className={`h-5 w-5 mt-0.5 ${getSeverityColor(flag.severity)}`}
@@ -232,12 +239,12 @@ export default function CasePrediction() {
             <Separator className="my-4" />
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="outline" className="w-full glass">
+                <Button variant="outline" className="w-full macos-vibrancy">
                   <Info className="h-4 w-4 mr-2" />
                   Why this prediction?
                 </Button>
               </SheetTrigger>
-              <SheetContent className="glass-strong w-full sm:max-w-xl">
+              <SheetContent className="macos-card w-full sm:max-w-xl">
                 <SheetHeader>
                   <SheetTitle>AI Reasoning</SheetTitle>
                   <SheetDescription>
@@ -246,7 +253,7 @@ export default function CasePrediction() {
                 </SheetHeader>
                 <ScrollArea className="h-[calc(100vh-120px)] mt-6">
                   <div className="space-y-4 pr-4">
-                    <div className="glass p-4 rounded-lg">
+                    <div className="macos-vibrancy p-4 rounded-lg">
                       <h4 className="font-medium mb-2">Analysis Method</h4>
                       <p className="text-sm text-muted-foreground">
                         {prediction.reasoning}
@@ -254,7 +261,7 @@ export default function CasePrediction() {
                     </div>
 
                     {biasReport && (
-                      <div className="glass p-4 rounded-lg">
+                      <div className="macos-vibrancy p-4 rounded-lg">
                         <h4 className="font-medium mb-3">Bias Analysis</h4>
                         <div className="space-y-3">
                           {Object.entries(biasReport.categories).map(([key, value]) => (
@@ -283,7 +290,7 @@ export default function CasePrediction() {
             whileHover={{ y: -8, scale: 1.02 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
-            <Card className="glass-strong p-6 hover:shadow-2xl transition-shadow duration-300">
+            <Card className="macos-card p-6 hover:shadow-2xl transition-shadow duration-300">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
               <FileText className="h-5 w-5" />
               Supporting Evidence
@@ -298,7 +305,7 @@ export default function CasePrediction() {
                     animate={{ opacity: 1, x: 0 }}
                     whileHover={{ x: 4, scale: 1.02 }}
                     transition={{ delay: index * 0.1, type: "spring", stiffness: 300 }}
-                    className="glass p-4 rounded-lg hover:bg-primary/5 cursor-pointer"
+                    className="macos-vibrancy p-4 rounded-lg hover:bg-primary/5 cursor-pointer"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">

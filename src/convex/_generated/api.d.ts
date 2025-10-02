@@ -17,6 +17,7 @@ import type * as auth_emailOtp from "../auth/emailOtp.js";
 import type * as auth from "../auth.js";
 import type * as biasReports from "../biasReports.js";
 import type * as cases from "../cases.js";
+import type * as documents from "../documents.js";
 import type * as http from "../http.js";
 import type * as predictions from "../predictions.js";
 import type * as queries from "../queries.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   biasReports: typeof biasReports;
   cases: typeof cases;
+  documents: typeof documents;
   http: typeof http;
   predictions: typeof predictions;
   queries: typeof queries;

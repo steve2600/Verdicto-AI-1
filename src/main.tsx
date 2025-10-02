@@ -15,6 +15,8 @@ import CasePrediction from "./pages/CasePrediction.tsx";
 import LegalResearch from "./pages/LegalResearch.tsx";
 import BiasInsights from "./pages/BiasInsights.tsx";
 import Reports from "./pages/Reports.tsx";
+import DocumentLibrary from "./pages/DocumentLibrary.tsx";
+import History from "./pages/History.tsx";
 import "./types/global.d.ts";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
@@ -54,9 +56,11 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/auth" element={<AuthPage redirectAfterAuth="/dashboard" />} />
             <Route path="/dashboard" element={<Dashboard />}>
               <Route index element={<CasePrediction />} />
+              <Route path="documents" element={<DocumentLibrary />} />
               <Route path="research" element={<LegalResearch />} />
               <Route path="bias" element={<BiasInsights />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="history" element={<History />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
