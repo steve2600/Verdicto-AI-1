@@ -24,19 +24,22 @@ export default function Landing() {
     }
   };
 
-  // Generate animated path data
+  // Generate animated path data with more flowing curves
   const generatePaths = () => {
     const paths = [];
     const numPaths = 15;
     
     for (let i = 0; i < numPaths; i++) {
       const startY = (i / numPaths) * 100;
+      const midY = startY + (Math.random() - 0.5) * 40;
       const endY = startY + (Math.random() - 0.5) * 30;
+      
+      // Create more complex curved paths
       paths.push({
         id: i,
-        d: `M 0 ${startY} Q 25 ${startY + (Math.random() - 0.5) * 20}, 50 ${(startY + endY) / 2} T 100 ${endY}`,
-        duration: 3 + Math.random() * 4,
-        delay: Math.random() * 2,
+        d: `M 0 ${startY} Q 25 ${midY}, 50 ${(startY + endY) / 2} T 100 ${endY}`,
+        duration: 4 + Math.random() * 6,
+        delay: Math.random() * 3,
       });
     }
     return paths;
@@ -55,9 +58,9 @@ export default function Landing() {
         >
           <defs>
             <linearGradient id="pathGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="rgba(100, 100, 100, 0)" />
-              <stop offset="50%" stopColor="rgba(150, 150, 150, 0.4)" />
-              <stop offset="100%" stopColor="rgba(100, 100, 100, 0)" />
+              <stop offset="0%" stopColor="rgba(120, 120, 120, 0)" />
+              <stop offset="50%" stopColor="rgba(180, 180, 180, 0.5)" />
+              <stop offset="100%" stopColor="rgba(120, 120, 120, 0)" />
             </linearGradient>
           </defs>
           {paths.map((path) => (
@@ -65,18 +68,18 @@ export default function Landing() {
               key={path.id}
               d={path.d}
               stroke="url(#pathGradient)"
-              strokeWidth="0.08"
+              strokeWidth="0.1"
               fill="none"
               initial={{ pathLength: 0, opacity: 0 }}
               animate={{
                 pathLength: [0, 1, 0],
-                opacity: [0, 0.6, 0],
+                opacity: [0, 0.7, 0],
               }}
               transition={{
                 duration: path.duration,
                 delay: path.delay,
                 repeat: Infinity,
-                ease: "linear",
+                ease: "easeInOut",
               }}
             />
           ))}
