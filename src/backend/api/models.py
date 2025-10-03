@@ -73,9 +73,19 @@ class Document(Base):
     jurisdiction = Column(String, index=True)
     status = Column(SQLEnum(DocumentStatus), default=DocumentStatus.PENDING, index=True)
     file_id = Column(String)
-    metadata = Column(JSON, nullable=True)
+    # Rename ORM attribute to avoid SQLAlchemy reserved name conflict, keep DB column name as "metadata"
+    meta = Column("metadata", JSON, nullable=True)
     chunks = Column(JSON, nullable=True)
     creation_time = Column(Integer, default=lambda: int(time.time() * 1000))
+
+    # Provide backward-compatible property so code and Pydantic can access `metadata`
+    @property
+    def metadata(self):
+        return self.meta
+
+    @metadata.setter
+    def metadata(self, value):
+        self.meta = value
 
 class Query(Base):
     __tablename__ = "queries"
