@@ -27,16 +27,28 @@ export default function AuthPage({ redirectAfterAuth = "/dashboard" }: AuthPageP
     return null;
   }
 
+  const convexUrl = import.meta.env.VITE_CONVEX_URL as string | undefined;
+
   const handleRequestOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
+      if (!convexUrl) {
+        throw new Error("Convex URL is not configured (VITE_CONVEX_URL).");
+      }
       await requestOTP(email);
       toast.success("Verification code sent to your email");
       setStep("code");
     } catch (error: any) {
-      toast.error("Failed to send code");
+      const msg =
+        error?.message ||
+        error?.data?.message ||
+        "Failed to send code";
+      toast.error(msg);
+      if (!convexUrl) {
+        toast.error("Set VITE_CONVEX_URL in your frontend environment (Integrations → API Keys or your .env) to your Convex deployment URL.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -47,11 +59,21 @@ export default function AuthPage({ redirectAfterAuth = "/dashboard" }: AuthPageP
     setIsLoading(true);
 
     try {
+      if (!convexUrl) {
+        throw new Error("Convex URL is not configured (VITE_CONVEX_URL).");
+      }
       await signIn(email, code);
       toast.success("Successfully signed in!");
       navigate(redirectAfterAuth);
     } catch (error: any) {
-      toast.error("Invalid code");
+      const msg =
+        error?.message ||
+        error?.data?.message ||
+        "Invalid code";
+      toast.error(msg);
+      if (!convexUrl) {
+        toast.error("Set VITE_CONVEX_URL in your frontend environment to your Convex deployment URL.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -63,6 +85,15 @@ export default function AuthPage({ redirectAfterAuth = "/dashboard" }: AuthPageP
       <div className="fixed top-6 right-6 z-50">
         <ThemeToggle />
       </div>
+
+      {/* Add: Convex URL warning banner */}
+      {!convexUrl && (
+        <div className="fixed top-6 left-6 right-6 z-50">
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm">
+            VITE_CONVEX_URL is not set. Configure it to your Convex deployment URL (Integrations → API Keys). Auth will not work until this is set.
+          </div>
+        </div>
+      )}
 
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/10" />

@@ -45,6 +45,18 @@ function RouteSyncer() {
   return null;
 }
 
+function ConvexEnvGuard() {
+  const url = import.meta.env.VITE_CONVEX_URL as string | undefined;
+  if (url) return null;
+  return (
+    <div className="fixed top-0 inset-x-0 z-50 px-4 py-2">
+      <div className="mx-auto max-w-4xl rounded-md border border-destructive/30 bg-destructive/10 px-4 py-2 text-xs md:text-sm">
+        VITE_CONVEX_URL is not configured. Set it to your Convex deployment URL. Authentication and Convex queries will fail until this is set.
+      </div>
+    </div>
+  );
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <VlyToolbar />
@@ -52,6 +64,7 @@ createRoot(document.getElementById("root")!).render(
       <ConvexAuthProvider client={convex}>
         <BrowserRouter>
           <ThemeProvider>
+            <ConvexEnvGuard />
             <RouteSyncer />
             <Routes>
               <Route path="/" element={<Landing />} />
