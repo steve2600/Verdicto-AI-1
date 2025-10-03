@@ -8,6 +8,8 @@ import { Scale, Mail, Lock, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import axios from "axios";
+import { API_BASE_URL } from "@/lib/api";
 
 interface AuthPageProps {
   redirectAfterAuth?: string;
@@ -27,6 +29,12 @@ export default function AuthPage({ redirectAfterAuth = "/dashboard" }: AuthPageP
     return null;
   }
 
+  // Add: helpful notice if site is not localhost but API points to localhost
+  const isLocalMismatch =
+    typeof window !== "undefined" &&
+    window.location.hostname !== "localhost" &&
+    API_BASE_URL.includes("localhost");
+
   const handleRequestOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -36,7 +44,16 @@ export default function AuthPage({ redirectAfterAuth = "/dashboard" }: AuthPageP
       toast.success("Verification code sent to your email");
       setStep("code");
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || "Failed to send code");
+      // Improved error messaging for network/CORS issues
+      let message = "Failed to send code";
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          message = `Cannot reach backend at ${API_BASE_URL}. Check VITE_API_URL or start the backend.`;
+        } else {
+          message = (error.response.data as any)?.detail || `Request failed (${error.response.status})`;
+        }
+      }
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -51,7 +68,16 @@ export default function AuthPage({ redirectAfterAuth = "/dashboard" }: AuthPageP
       toast.success("Successfully signed in!");
       navigate(redirectAfterAuth);
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || "Invalid code");
+      // Improved error messaging for network issues
+      let message = "Invalid code";
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          message = `Cannot reach backend at ${API_BASE_URL}. Check VITE_API_URL or start the backend.`;
+        } else {
+          message = (error.response.data as any)?.detail || `Verification failed (${error.response.status})`;
+        }
+      }
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -63,6 +89,13 @@ export default function AuthPage({ redirectAfterAuth = "/dashboard" }: AuthPageP
       <div className="fixed top-6 right-6 z-50">
         <ThemeToggle />
       </div>
+
+      {/* Add: environment hint */}
+      {isLocalMismatch && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 text-xs bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 rounded px-3 py-1.5">
+          Frontend is not localhost, but API is {API_BASE_URL}. Set VITE_API_URL to your deployed backend URL.
+        </div>
+      )}
 
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/10" />
