@@ -1,70 +1,33 @@
-import { useState, useEffect } from "react";
-import { authApi, usersApi } from "@/lib/api";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useConvexAuth } from "convex/react";
 
-interface User {
-  id: string;
-  name?: string;
-  email?: string;
-  image?: string;
-  role?: string;
-  view_mode?: string;
-  preferred_language?: string;
-  is_anonymous: boolean;
-  creation_time: number;
-}
-
+// Keep the same shape the app expects
 export function useAuth() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const { isLoading, isAuthenticated } = useConvexAuth();
+  const { signIn, signOut } = useAuthActions();
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    try {
-      const response = await authApi.getMe();
-      setUser(response.data);
-      setIsAuthenticated(true);
-    } catch (error) {
-      setUser(null);
-      setIsAuthenticated(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const signIn = async (email: string, code: string) => {
-    try {
-      const response = await authApi.verifyOTP(email, code);
-      setUser(response.data.user);
-      setIsAuthenticated(true);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  const signOut = async () => {
-    try {
-      await authApi.signOut();
-      setUser(null);
-      setIsAuthenticated(false);
-    } catch (error) {
-      console.error("Sign out error:", error);
-    }
-  };
-
+  // Request OTP via Convex email OTP
   const requestOTP = async (email: string) => {
-    return authApi.requestOTP(email);
+    // Start the email OTP flow (step 1: send code)
+    const formData = new FormData();
+    formData.append("email", email);
+    return signIn("email_otp", formData);
+  };
+
+  // Verify OTP (step 2: verify code)
+  const verifyOTP = async (email: string, code: string) => {
+    const formData = new FormData();
+    formData.append("email", email);
+    formData.append("code", code);
+    return signIn("email_otp", formData);
   };
 
   return {
     isLoading,
     isAuthenticated,
-    user,
-    signIn,
+    user: null, // Convex auth doesn't expose user directly in this hook
+    // For compatibility with existing Auth.tsx usage:
+    signIn: verifyOTP,
     signOut,
     requestOTP,
   };
