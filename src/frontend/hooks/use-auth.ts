@@ -11,7 +11,8 @@ export function useAuth() {
     // Start the email OTP flow (step 1: send code)
     const formData = new FormData();
     formData.append("email", email);
-    return signIn("email_otp", formData);
+    // Fix provider id: "email-otp" (hyphen), not "email_otp"
+    return signIn("email-otp", formData);
   };
 
   // Verify OTP (step 2: verify code)
@@ -19,7 +20,8 @@ export function useAuth() {
     const formData = new FormData();
     formData.append("email", email);
     formData.append("code", code);
-    return signIn("email_otp", formData);
+    // Fix provider id: "email-otp" (hyphen), not "email_otp"
+    return signIn("email-otp", formData);
   };
 
   return {
