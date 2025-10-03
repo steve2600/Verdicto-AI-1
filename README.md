@@ -36,7 +36,9 @@ Use pnpm for the package manager.
 
 ## Setup
 
-This project is set up already and running on a cloud environment, as well as a convex development in the sandbox.
+### Backend Setup (Python FastAPI)
+
+1. Navigate to backend directory:
 
 ## Environment Variables
 
