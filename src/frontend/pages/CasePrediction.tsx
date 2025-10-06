@@ -84,14 +84,12 @@ export default function CasePrediction() {
     }
 
     if (isRecording) {
-      // Stop recording
       if (recognition) {
         recognition.stop();
       }
       setIsRecording(false);
       toast.success("Recording stopped");
     } else {
-      // Start recording
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const recognitionInstance = new SpeechRecognition();
       
@@ -117,11 +115,9 @@ export default function CasePrediction() {
           }
         }
 
-        // Update the text area with transcribed text
-        setQueryText(prev => {
-          const newText = prev + finalTranscript;
-          return newText;
-        });
+        if (finalTranscript) {
+          setQueryText(prev => prev + finalTranscript);
+        }
       };
 
       recognitionInstance.onerror = (event: any) => {
@@ -165,7 +161,6 @@ export default function CasePrediction() {
         </p>
       </motion.div>
 
-      {/* Query Input Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -235,14 +230,12 @@ export default function CasePrediction() {
         </Card>
       </motion.div>
 
-      {/* Results Section */}
       {prediction && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
-          {/* Mode Toggle */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -269,183 +262,178 @@ export default function CasePrediction() {
               </Button>
             </Card>
           </motion.div>
-          {/* Prediction Card */}
+
           <motion.div
             whileHover={{ y: -8, scale: 1.02 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
             <Card className="macos-card p-6 neon-glow hover:shadow-2xl transition-shadow duration-300">
-            <div className="flex items-start gap-4 mb-4">
-              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center neon-glow">
-                <TrendingUp className="h-6 w-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xl font-bold">AI Prediction</h3>
-                  <ConfidenceBadge
-                    level={prediction.confidenceLevel}
-                    score={prediction.confidenceScore}
-                  />
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center neon-glow">
+                  <TrendingUp className="h-6 w-6 text-primary" />
                 </div>
-                <p className="text-muted-foreground">{prediction.prediction}</p>
-              </div>
-            </div>
-
-            <Separator className="my-4" />
-
-            {/* Confidence Score */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Confidence Score</span>
-                <span className="text-2xl font-bold text-primary">
-                  {Math.round(prediction.confidenceScore * 100)}%
-                </span>
-              </div>
-              <Progress value={prediction.confidenceScore * 100} className="h-3" />
-            </div>
-
-            {/* Bias Flags */}
-            {prediction.biasFlags.length > 0 && (
-              <>
-                <Separator className="my-4" />
-                <div>
-                  <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    Bias Alerts
-                  </h4>
-                  <div className="space-y-2">
-                    {prediction.biasFlags.map((flag, index) => (
-                      <div
-                        key={index}
-                        className="macos-vibrancy p-3 rounded-lg flex items-start gap-3"
-                      >
-                        <AlertTriangle
-                          className={`h-5 w-5 mt-0.5 ${getSeverityColor(flag.severity)}`}
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-sm">{flag.type}</span>
-                            <Badge
-                              variant={
-                                flag.severity === "high"
-                                  ? "destructive"
-                                  : flag.severity === "medium"
-                                  ? "default"
-                                  : "secondary"
-                              }
-                              className="text-xs"
-                            >
-                              {flag.severity}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {flag.description}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xl font-bold">AI Prediction</h3>
+                    <ConfidenceBadge
+                      level={prediction.confidenceLevel}
+                      score={prediction.confidenceScore}
+                    />
                   </div>
+                  <p className="text-muted-foreground">{prediction.prediction}</p>
                 </div>
-              </>
-            )}
+              </div>
 
-            {/* Reasoning Drawer */}
-            <Separator className="my-4" />
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" className="w-full macos-vibrancy">
-                  <Info className="h-4 w-4 mr-2" />
-                  Why this prediction?
-                </Button>
-              </SheetTrigger>
-              <SheetContent className="macos-card w-full sm:max-w-xl">
-                <SheetHeader>
-                  <SheetTitle>AI Reasoning</SheetTitle>
-                  <SheetDescription>
-                    Explainable AI analysis for this prediction
-                  </SheetDescription>
-                </SheetHeader>
-                <ScrollArea className="h-[calc(100vh-120px)] mt-6">
-                  <div className="space-y-4 pr-4">
-                    <div className="macos-vibrancy p-4 rounded-lg">
-                      <h4 className="font-medium mb-2">Analysis Method</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {prediction.reasoning}
-                      </p>
-                    </div>
+              <Separator className="my-4" />
 
-                    {biasReport && (
-                      <div className="macos-vibrancy p-4 rounded-lg">
-                        <h4 className="font-medium mb-3">Bias Analysis</h4>
-                        <div className="space-y-3">
-                          {Object.entries(biasReport.categories).map(([key, value]) => (
-                            <div key={key}>
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-sm capitalize">{key}</span>
-                                <span className="text-sm font-medium">
-                                  {Math.round(value * 100)}%
-                                </span>
-                              </div>
-                              <Progress value={value * 100} className="h-2" />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Confidence Score</span>
+                  <span className="text-2xl font-bold text-primary">
+                    {Math.round(prediction.confidenceScore * 100)}%
+                  </span>
+                </div>
+                <Progress value={prediction.confidenceScore * 100} className="h-3" />
+              </div>
+
+              {prediction.biasFlags.length > 0 && (
+                <>
+                  <Separator className="my-4" />
+                  <div>
+                    <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      Bias Alerts
+                    </h4>
+                    <div className="space-y-2">
+                      {prediction.biasFlags.map((flag, index) => (
+                        <div
+                          key={index}
+                          className="macos-vibrancy p-3 rounded-lg flex items-start gap-3"
+                        >
+                          <AlertTriangle
+                            className={`h-5 w-5 mt-0.5 ${getSeverityColor(flag.severity)}`}
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-sm">{flag.type}</span>
+                              <Badge
+                                variant={
+                                  flag.severity === "high"
+                                    ? "destructive"
+                                    : flag.severity === "medium"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                                className="text-xs"
+                              >
+                                {flag.severity}
+                              </Badge>
                             </div>
-                          ))}
+                            <p className="text-sm text-muted-foreground">
+                              {flag.description}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      ))}
+                    </div>
                   </div>
-                </ScrollArea>
-              </SheetContent>
-            </Sheet>
+                </>
+              )}
+
+              <Separator className="my-4" />
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="w-full macos-vibrancy">
+                    <Info className="h-4 w-4 mr-2" />
+                    Why this prediction?
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="macos-card w-full sm:max-w-xl">
+                  <SheetHeader>
+                    <SheetTitle>AI Reasoning</SheetTitle>
+                    <SheetDescription>
+                      Explainable AI analysis for this prediction
+                    </SheetDescription>
+                  </SheetHeader>
+                  <ScrollArea className="h-[calc(100vh-120px)] mt-6">
+                    <div className="space-y-4 pr-4">
+                      <div className="macos-vibrancy p-4 rounded-lg">
+                        <h4 className="font-medium mb-2">Analysis Method</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {prediction.reasoning}
+                        </p>
+                      </div>
+
+                      {biasReport && (
+                        <div className="macos-vibrancy p-4 rounded-lg">
+                          <h4 className="font-medium mb-3">Bias Analysis</h4>
+                          <div className="space-y-3">
+                            {Object.entries(biasReport.categories).map(([key, value]) => (
+                              <div key={key}>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-sm capitalize">{key}</span>
+                                  <span className="text-sm font-medium">
+                                    {Math.round(value * 100)}%
+                                  </span>
+                                </div>
+                                <Progress value={value * 100} className="h-2" />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </SheetContent>
+              </Sheet>
             </Card>
           </motion.div>
 
-          {/* Evidence Panel */}
           <motion.div
             whileHover={{ y: -8, scale: 1.02 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
             <Card className="macos-card p-6 hover:shadow-2xl transition-shadow duration-300">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Supporting Evidence
-            </h3>
-            <div className="space-y-3">
-              {prediction.evidenceSnippets.map((snippet, index) => {
-                const relatedCase = cases?.find((c) => c._id === snippet.caseId);
-                return (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    whileHover={{ x: 4, scale: 1.02 }}
-                    transition={{ delay: index * 0.1, type: "spring", stiffness: 300 }}
-                    className="macos-vibrancy p-4 rounded-lg hover:bg-primary/5 cursor-pointer"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        <span className="font-medium text-sm">
-                          {relatedCase?.caseNumber || "Case Reference"}
-                        </span>
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Supporting Evidence
+              </h3>
+              <div className="space-y-3">
+                {prediction.evidenceSnippets.map((snippet, index) => {
+                  const relatedCase = cases?.find((c) => c._id === snippet.caseId);
+                  return (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      whileHover={{ x: 4, scale: 1.02 }}
+                      transition={{ delay: index * 0.1, type: "spring", stiffness: 300 }}
+                      className="macos-vibrancy p-4 rounded-lg hover:bg-primary/5 cursor-pointer"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          <span className="font-medium text-sm">
+                            {relatedCase?.caseNumber || "Case Reference"}
+                          </span>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {Math.round(snippet.relevance * 100)}% relevant
+                        </Badge>
                       </div>
-                      <Badge variant="secondary" className="text-xs">
-                        {Math.round(snippet.relevance * 100)}% relevant
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {relatedCase?.title}
-                    </p>
-                    <p className="text-sm">{snippet.snippet}</p>
-                  </motion.div>
-                );
-              })}
-            </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {relatedCase?.title}
+                      </p>
+                      <p className="text-sm">{snippet.snippet}</p>
+                    </motion.div>
+                  );
+                })}
+              </div>
             </Card>
           </motion.div>
         </motion.div>
       )}
 
-      {/* Empty State */}
       {!prediction && !isAnalyzing && (
         <motion.div
           initial={{ opacity: 0 }}
