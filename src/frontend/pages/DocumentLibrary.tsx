@@ -23,7 +23,7 @@ import {
   XCircle,
   Loader2,
 } from "lucide-react";
-import { useQuery } from "convex/react";
+import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 
@@ -34,8 +34,9 @@ export default function DocumentLibrary() {
   const documents = useQuery(api.documents.list, {
     jurisdiction: selectedJurisdiction || undefined,
   });
+  const processDocumentWithRAG = useAction(api.rag.processDocument);
 
-  const filteredDocuments = documents?.filter((doc) =>
+  const filteredDocuments = documents?.filter((doc: any) =>
     searchTerm.length > 0
       ? doc.title.toLowerCase().includes(searchTerm.toLowerCase())
       : true
@@ -71,6 +72,11 @@ export default function DocumentLibrary() {
 
   const handleUpload = () => {
     toast.info("Document upload feature coming soon!");
+    // TODO: Implement file upload that calls processDocumentWithRAG
+    // Example flow:
+    // 1. Upload file to Convex storage
+    // 2. Create document record
+    // 3. Call processDocumentWithRAG with document ID and file URL
   };
 
   return (
@@ -154,7 +160,7 @@ export default function DocumentLibrary() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDocuments?.map((doc, index) => (
+              {filteredDocuments?.map((doc: any, index: number) => (
                 <motion.tr
                   key={doc._id}
                   initial={{ opacity: 0, x: -20 }}

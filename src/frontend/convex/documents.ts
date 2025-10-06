@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const create = mutation({
@@ -61,7 +61,7 @@ export const list = query({
   },
 });
 
-export const updateStatus = mutation({
+export const updateStatus = internalMutation({
   args: {
     documentId: v.id("documents"),
     status: v.union(
@@ -72,12 +72,9 @@ export const updateStatus = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
     const document = await ctx.db.get(args.documentId);
-    if (!document || document.userId !== userId) {
-      throw new Error("Document not found or unauthorized");
+    if (!document) {
+      throw new Error("Document not found");
     }
 
     await ctx.db.patch(args.documentId, { status: args.status });

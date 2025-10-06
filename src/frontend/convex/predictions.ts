@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const create = mutation({
@@ -42,6 +42,45 @@ export const create = mutation({
       ...args,
       userId,
       confidenceLevel,
+    });
+
+    return predictionId;
+  },
+});
+
+export const createFromRAG = internalMutation({
+  args: {
+    queryId: v.id("queries"),
+    ragResponse: v.string(),
+    confidence: v.number(),
+    sources: v.array(v.any()),
+  },
+  handler: async (ctx, args) => {
+    const query = await ctx.db.get(args.queryId);
+    if (!query) throw new Error("Query not found");
+
+    const cases = await ctx.db.query("cases").take(3);
+    const caseIds = cases.map((c) => c._id);
+
+    const confidenceLevel = 
+      args.confidence >= 0.75 ? "high" as const :
+      args.confidence >= 0.5 ? "medium" as const :
+      "low" as const;
+
+    const predictionId = await ctx.db.insert("predictions", {
+      queryId: args.queryId,
+      userId: query.userId,
+      prediction: args.ragResponse,
+      confidenceScore: args.confidence,
+      confidenceLevel,
+      reasoning: "Analysis powered by RAG system with semantic search and cross-encoder reranking.",
+      relatedCases: caseIds,
+      biasFlags: [],
+      evidenceSnippets: args.sources.slice(0, 5).map((source: any, idx: number) => ({
+        caseId: caseIds[idx % caseIds.length],
+        snippet: source.content || source.text || "",
+        relevance: source.score || 0.8,
+      })),
     });
 
     return predictionId;

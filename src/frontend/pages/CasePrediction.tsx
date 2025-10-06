@@ -20,7 +20,7 @@ import {
   Mic,
   MicOff,
 } from "lucide-react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
@@ -45,7 +45,7 @@ export default function CasePrediction() {
   const [interimTranscript, setInterimTranscript] = useState("");
 
   const createQuery = useMutation(api.queries.create);
-  const mockAnalysis = useMutation(api.predictions.mockAnalysis);
+  const analyzeWithRAG = useAction(api.rag.analyzeQuery);
   const prediction = useQuery(
     api.predictions.getByQuery,
     currentQueryId ? { queryId: currentQueryId } : "skip"
@@ -67,7 +67,12 @@ export default function CasePrediction() {
       const queryId = await createQuery({ queryText });
       setCurrentQueryId(queryId);
       
-      await mockAnalysis({ queryId });
+      // Send to RAG backend for analysis
+      await analyzeWithRAG({ 
+        queryId, 
+        queryText,
+        documentIds: undefined 
+      });
       
       toast.success("Analysis complete!");
     } catch (error) {
@@ -317,7 +322,7 @@ export default function CasePrediction() {
                       Bias Alerts
                     </h4>
                     <div className="space-y-2">
-                      {prediction.biasFlags.map((flag, index) => (
+                      {prediction.biasFlags.map((flag: any, index: number) => (
                         <div
                           key={index}
                           className="macos-vibrancy p-3 rounded-lg flex items-start gap-3"
@@ -385,10 +390,10 @@ export default function CasePrediction() {
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-sm capitalize">{key}</span>
                                   <span className="text-sm font-medium">
-                                    {Math.round(value * 100)}%
+                                    {Math.round((value as number) * 100)}%
                                   </span>
                                 </div>
-                                <Progress value={value * 100} className="h-2" />
+                                <Progress value={(value as number) * 100} className="h-2" />
                               </div>
                             ))}
                           </div>
@@ -411,8 +416,8 @@ export default function CasePrediction() {
                 Supporting Evidence
               </h3>
               <div className="space-y-3">
-                {prediction.evidenceSnippets.map((snippet, index) => {
-                  const relatedCase = cases?.find((c) => c._id === snippet.caseId);
+                {prediction.evidenceSnippets.map((snippet: any, index: number) => {
+                  const relatedCase = cases?.find((c: any) => c._id === snippet.caseId);
                   return (
                     <motion.div
                       key={index}
