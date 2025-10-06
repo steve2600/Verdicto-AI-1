@@ -42,6 +42,7 @@ export default function CasePrediction() {
   const [userMode, setUserMode] = useState<"citizen" | "lawyer">("citizen");
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
+  const [interimTranscript, setInterimTranscript] = useState("");
 
   const createQuery = useMutation(api.queries.create);
   const mockAnalysis = useMutation(api.predictions.mockAnalysis);
@@ -103,20 +104,25 @@ export default function CasePrediction() {
       };
 
       recognitionInstance.onresult = (event: any) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
+        let interim = '';
+        let final = '';
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            finalTranscript += transcript + ' ';
+            final += transcript + ' ';
           } else {
-            interimTranscript += transcript;
+            interim += transcript;
           }
         }
 
-        if (finalTranscript) {
-          setQueryText(prev => prev + finalTranscript);
+        // Update interim transcript for live display
+        setInterimTranscript(interim);
+
+        // Append final transcript to the query text
+        if (final) {
+          setQueryText(prev => prev + final);
+          setInterimTranscript(''); // Clear interim once finalized
         }
       };
 
@@ -128,6 +134,7 @@ export default function CasePrediction() {
 
       recognitionInstance.onend = () => {
         setIsRecording(false);
+        setInterimTranscript(''); // Clear interim on end
       };
 
       setRecognition(recognitionInstance);
@@ -174,8 +181,13 @@ export default function CasePrediction() {
               </label>
               <Textarea
                 placeholder="Ask about a case, upload documents, or describe a legal scenario..."
-                value={queryText}
-                onChange={(e) => setQueryText(e.target.value)}
+                value={queryText + interimTranscript}
+                onChange={(e) => {
+                  // Only update queryText if not recording, to prevent overwriting live transcription
+                  if (!isRecording) {
+                    setQueryText(e.target.value);
+                  }
+                }}
                 className="min-h-[120px] macos-vibrancy resize-none"
                 disabled={isAnalyzing}
               />
