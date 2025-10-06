@@ -1,0 +1,11 @@
+├── schema.ts           → Database table definitions
+├── auth.ts            → Convex Auth configuration (email-otp)
+├── rag.ts             → **Bridge to FastAPI RAG backend**
+│   ├── processDocument()   → Send docs to RAG for ingestion
+│   ├── analyzeQuery()      → Send queries to RAG for analysis
+│   └── searchDocuments()   → Vector search via RAG
+├── documents.ts       → Document CRUD + status updates
+├── queries.ts         → Query CRUD + status tracking
+├── predictions.ts     → Prediction storage + RAG result parsing
+├── cases.ts           → Legal case database queries
+└── users.ts           → User profile management

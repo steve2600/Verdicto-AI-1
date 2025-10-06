@@ -1,0 +1,6 @@
+├── app.py              → FastAPI application setup
+├── main.py             → Entry point
+├── ingest.py           → Document chunking & embedding
+├── qa_chain.py         → RAG chain (retrieval + generation)
+├── utils.py            → Helper functions
+└── rerankers/          → Cross-encoder reranking logic
