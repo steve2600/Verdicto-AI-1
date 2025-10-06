@@ -17,6 +17,8 @@ import {
   Info,
   User,
   Briefcase,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -38,6 +40,8 @@ export default function CasePrediction() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentQueryId, setCurrentQueryId] = useState<Id<"queries"> | null>(null);
   const [userMode, setUserMode] = useState<"citizen" | "lawyer">("citizen");
+  const [isRecording, setIsRecording] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
 
   const createQuery = useMutation(api.queries.create);
   const mockAnalysis = useMutation(api.predictions.mockAnalysis);
@@ -70,6 +74,68 @@ export default function CasePrediction() {
       console.error(error);
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const toggleRecording = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      toast.error("Speech recognition is not supported in your browser");
+      return;
+    }
+
+    if (isRecording) {
+      // Stop recording
+      if (recognition) {
+        recognition.stop();
+      }
+      setIsRecording(false);
+      toast.success("Recording stopped");
+    } else {
+      // Start recording
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const recognitionInstance = new SpeechRecognition();
+      
+      recognitionInstance.continuous = true;
+      recognitionInstance.interimResults = true;
+      recognitionInstance.lang = 'en-US';
+
+      recognitionInstance.onstart = () => {
+        setIsRecording(true);
+        toast.success("Recording started - speak now");
+      };
+
+      recognitionInstance.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' ';
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+
+        // Update the text area with transcribed text
+        setQueryText(prev => {
+          const newText = prev + finalTranscript;
+          return newText;
+        });
+      };
+
+      recognitionInstance.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        toast.error(`Recording error: ${event.error}`);
+        setIsRecording(false);
+      };
+
+      recognitionInstance.onend = () => {
+        setIsRecording(false);
+      };
+
+      setRecognition(recognitionInstance);
+      recognitionInstance.start();
     }
   };
 
@@ -120,7 +186,7 @@ export default function CasePrediction() {
               />
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Button
                 variant="outline"
                 className="macos-vibrancy"
@@ -130,9 +196,27 @@ export default function CasePrediction() {
                 Upload Documents
               </Button>
               <Button
+                variant="outline"
+                className="macos-vibrancy"
+                onClick={toggleRecording}
+                disabled={isAnalyzing}
+              >
+                {isRecording ? (
+                  <>
+                    <MicOff className="h-4 w-4 mr-2 animate-pulse text-red-500" />
+                    Stop Recording
+                  </>
+                ) : (
+                  <>
+                    <Mic className="h-4 w-4 mr-2" />
+                    Live Transcribe
+                  </>
+                )}
+              </Button>
+              <Button
                 onClick={handleSubmit}
                 disabled={isAnalyzing || !queryText.trim()}
-                className="neon-glow"
+                className="neon-glow ml-auto"
               >
                 {isAnalyzing ? (
                   <>
