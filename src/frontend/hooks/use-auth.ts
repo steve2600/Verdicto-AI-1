@@ -24,6 +24,11 @@ export function useAuth() {
     return signIn("email-otp", formData);
   };
 
+  // Sign in as anonymous guest
+  const signInAsGuest = async () => {
+    return signIn("anonymous");
+  };
+
   return {
     isLoading,
     isAuthenticated,
@@ -32,5 +37,6 @@ export function useAuth() {
     signIn: verifyOTP,
     signOut,
     requestOTP,
+    signInAsGuest,
   };
 }

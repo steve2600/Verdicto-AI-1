@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Scale, Mail, Lock, Shield } from "lucide-react";
+import { Scale, Mail, Lock, Shield, UserCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -15,7 +15,7 @@ interface AuthPageProps {
 
 export default function AuthPage({ redirectAfterAuth = "/dashboard" }: AuthPageProps) {
   const navigate = useNavigate();
-  const { requestOTP, signIn, isAuthenticated } = useAuth();
+  const { requestOTP, signIn, signInAsGuest, isAuthenticated } = useAuth();
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -74,6 +74,26 @@ export default function AuthPage({ redirectAfterAuth = "/dashboard" }: AuthPageP
       if (!convexUrl) {
         toast.error("Set VITE_CONVEX_URL in your frontend environment to your Convex deployment URL.");
       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGuestSignIn = async () => {
+    setIsLoading(true);
+    try {
+      if (!convexUrl) {
+        throw new Error("Convex URL is not configured (VITE_CONVEX_URL).");
+      }
+      await signInAsGuest();
+      toast.success("Signed in as guest");
+      navigate(redirectAfterAuth);
+    } catch (error: any) {
+      const msg =
+        error?.message ||
+        error?.data?.message ||
+        "Failed to sign in as guest";
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -150,6 +170,27 @@ export default function AuthPage({ redirectAfterAuth = "/dashboard" }: AuthPageP
                 disabled={isLoading}
               >
                 {isLoading ? "Sending..." : "Continue with Email"}
+              </Button>
+
+              {/* Guest Sign In */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border/50" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleGuestSignIn}
+                disabled={isLoading}
+              >
+                <UserCircle className="h-5 w-5 mr-2" />
+                {isLoading ? "Signing in..." : "Continue as Guest"}
               </Button>
             </form>
           ) : (
