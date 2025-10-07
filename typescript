@@ -1,11 +1,11 @@
-├── schema.ts           → Database table definitions
-├── auth.ts            → Convex Auth configuration (email-otp)
-├── rag.ts             → **Bridge to FastAPI RAG backend**
-│   ├── processDocument()   → Send docs to RAG for ingestion
-│   ├── analyzeQuery()      → Send queries to RAG for analysis
-│   └── searchDocuments()   → Vector search via RAG
-├── documents.ts       → Document CRUD + status updates
-├── queries.ts         → Query CRUD + status tracking
-├── predictions.ts     → Prediction storage + RAG result parsing
-├── cases.ts           → Legal case database queries
-└── users.ts           → User profile management
+// Temporarily disabled - ML backend not yet deployed
+// try {
+//   await ctx.runAction(internal.mlBiasAnalysis.analyzeCaseWithML, {
+//     caseText: args.queryText,
+//     ragSummary: ragResponse,
+//     sourceDocuments: sources.map((s: any) => s.content || s.text || ""),
+//     predictionId,
+//   });
+// } catch (error) {
+//   console.warn("ML bias analysis failed (non-critical):", error);
+// }
