@@ -25,6 +25,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     PyMuPDF==1.26.3 && \
     pip install --no-cache-dir \
     langchain==0.3.27 \
+    langchain-community==0.3.27 \
     langchain-groq==0.3.6 \
     langchain-voyageai==0.1.6 \
     langchain-weaviate==0.0.5 \
