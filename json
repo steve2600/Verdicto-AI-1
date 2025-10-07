@@ -1,0 +1,8 @@
+POST https://verdicto-ai-production.up.railway.app/api/v1/hackrx/run
+{
+  "documents": "https://example.com/legal-document.pdf",
+  "questions": [
+    "What is the main issue in this case?",
+    "What was the court's decision?"
+  ]
+}
