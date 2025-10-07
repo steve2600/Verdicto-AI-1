@@ -2,11 +2,21 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-COPY . /app/
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && apt-get install -y build-essential gcc \
-    && pip install --upgrade pip \
-    && pip install -r requirements_clean.txt
+# Copy requirements first for better caching
+COPY requirements_clean.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements_clean.txt
+
+# Copy application code
+COPY app/ ./app/
 
 EXPOSE 10000
 
