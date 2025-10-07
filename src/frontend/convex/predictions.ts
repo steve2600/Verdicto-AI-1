@@ -191,3 +191,54 @@ export const mockAnalysis = mutation({
     return predictionId;
   },
 });
+
+export const updateBiasFlags = internalMutation({
+  args: {
+    predictionId: v.id("predictions"),
+    biasFlags: v.array(
+      v.object({
+        type: v.string(),
+        severity: v.union(
+          v.literal("low"),
+          v.literal("medium"),
+          v.literal("high")
+        ),
+        description: v.string(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.predictionId, {
+      biasFlags: args.biasFlags,
+    });
+  },
+});
+
+export const getHistoricalData = internalMutation({
+  args: {
+    timeRange: v.optional(
+      v.object({
+        startDate: v.number(),
+        endDate: v.number(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    let query = ctx.db.query("predictions");
+
+    // Note: Convex doesn't support time-based filtering directly in this version
+    // You would need to fetch all and filter, or use indexes
+    const predictions = await query.take(100);
+
+    // Filter by time if provided
+    if (args.timeRange) {
+      return predictions.filter(
+        (p) =>
+          p._creationTime >= args.timeRange!.startDate &&
+          p._creationTime <= args.timeRange!.endDate
+      );
+    }
+
+    return predictions;
+  },
+});
