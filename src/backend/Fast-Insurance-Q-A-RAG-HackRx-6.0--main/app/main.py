@@ -17,7 +17,8 @@ from app.qa_chain import get_ultra_fast_qa_chain, cleanup_client
 from fastapi.concurrency import run_in_threadpool
 import httpx
 
-from app.rerankers.local_cross_encoder import initialize_cross_encoder
+# Cross-encoder disabled to reduce Docker image size
+# from app.rerankers.local_cross_encoder import initialize_cross_encoder
 
 
 app = FastAPI()
@@ -151,7 +152,9 @@ async def health_check():
 
 @app.on_event("startup")
 async def startup_event():
-    await run_in_threadpool(initialize_cross_encoder)
+    print("✅ RAG Backend started successfully (reranking disabled)")
+    # Cross-encoder initialization removed to reduce dependencies
+    # await run_in_threadpool(initialize_cross_encoder)
 
 @app.on_event("shutdown")
 async def shutdown_event():

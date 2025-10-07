@@ -22,10 +22,11 @@ from weaviate.classes.query import HybridFusion
 import weaviate
 
 # === NEW: Cross-Encoder Import ===
-from sentence_transformers import CrossEncoder
+# Removed sentence_transformers to reduce Docker image size
+# Cross-encoder reranking is now disabled
 import torch
 
-from app.rerankers.local_cross_encoder import LocalCrossEncoder
+# from app.rerankers.local_cross_encoder import LocalCrossEncoder
 
 # === Load environment variables ===
 load_dotenv()
@@ -54,34 +55,12 @@ cross_encoder = None
 def initialize_cross_encoder():
     """Initialize cross-encoder at startup - call this in your main.py"""
     global cross_encoder
-
-    if cross_encoder is not None:
-        return cross_encoder
-
-    try:
-        import warnings
-        warnings.filterwarnings("ignore", message=".*_attention_mask.*")
-        warnings.filterwarnings("ignore", message=".*huggingface_hub.*")
-
-        print("🔄 Initializing cross-encoder at startup...")
-
-        # Give PyTorch time to properly initialize
-        import time
-        time.sleep(1)
-
-        # Clear any existing CUDA cache
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-
-        cross_encoder = LocalCrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
-        print("✅ Cross-encoder loaded successfully at startup!")
-        return cross_encoder
-
-    except Exception as e:
-        print(f"❌ Cross-encoder initialization failed: {str(e)}")
-        print("⚠️ Continuing without reranking...")
-        cross_encoder = None
-        return None
+    
+    # Cross-encoder disabled to reduce Docker image size
+    print("⚠️ Cross-encoder reranking is disabled (sentence-transformers not installed)")
+    print("✅ Continuing with standard retrieval (no reranking)")
+    cross_encoder = None
+    return None
 
 
 def get_cross_encoder():
@@ -156,44 +135,8 @@ class UltraFastRetriever(BaseRetriever):
             return []
 
     def _rerank_documents(self, query: str, documents: List[Document]) -> List[Document]:
-        if not documents or not self._use_reranking:
-            return documents
-
-        cross_enc = get_cross_encoder()
-        if cross_enc is None:
-            return documents
-
-        try:
-            # Extract document texts for reranking
-            doc_texts = [doc.page_content[:400] for doc in documents]
-
-            # Use LocalCrossEncoder's rerank method
-            reranked_texts = cross_enc.rerank(query, doc_texts, top_k=len(doc_texts))
-
-            # Create a mapping from text to original document
-            text_to_doc = {doc.page_content[:400]: doc for doc in documents}
-
-            # Rebuild documents in reranked order
-            reranked_docs = []
-            for i, text in enumerate(reranked_texts):
-                if text in text_to_doc:
-                    doc = text_to_doc[text]
-                    doc.metadata['rerank_position'] = i + 1
-                    reranked_docs.append(doc)
-
-            # Add any remaining documents that weren't reranked
-            reranked_texts_set = set(reranked_texts)
-            for doc in documents:
-                if doc.page_content[:400] not in reranked_texts_set:
-                    doc.metadata['rerank_position'] = len(reranked_docs) + 1
-                    reranked_docs.append(doc)
-
-            print(f"🔄 Reranked {len(reranked_docs)} chunks using LocalCrossEncoder")
-            return reranked_docs
-
-        except Exception as e:
-            print(f"⚠️ Reranking error: {str(e)[:50]}... using original order")
-            return documents
+        # Reranking disabled - sentence_transformers not installed
+        return documents
 
     async def _aget_relevant_documents(
             self, query: str, *, run_manager: CallbackManagerForRetrieverRun = None
