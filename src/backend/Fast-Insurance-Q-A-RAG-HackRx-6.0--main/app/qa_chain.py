@@ -24,7 +24,7 @@ import weaviate
 # === NEW: Cross-Encoder Import ===
 # Removed sentence_transformers to reduce Docker image size
 # Cross-encoder reranking is now disabled
-import torch
+# torch import also removed as it was only needed for sentence_transformers
 
 # from app.rerankers.local_cross_encoder import LocalCrossEncoder
 
