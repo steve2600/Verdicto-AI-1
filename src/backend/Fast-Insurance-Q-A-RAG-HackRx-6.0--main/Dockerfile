@@ -29,8 +29,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     langchain-voyageai==0.1.6 \
     langchain-weaviate==0.0.5 \
     langchain-text-splitters==0.3.9 \
-    weaviate-client==4.16.4 && \
-    pip install --no-cache-dir sentence-transformers==5.0.0
+    weaviate-client==4.16.4
 
 # Copy application code
 COPY app/ ./app/
