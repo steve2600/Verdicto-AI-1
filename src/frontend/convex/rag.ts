@@ -114,6 +114,18 @@ export const analyzeQuery = action({
         sources,
       });
 
+      // Call ML bias analysis
+      try {
+        await ctx.runAction(internal.mlBiasAnalysis.analyzeCaseWithML, {
+          caseText: args.queryText,
+          ragSummary: ragResponse,
+          sourceDocuments: sources.map((s: any) => s.content || s.text || ""),
+          predictionId,
+        });
+      } catch (error) {
+        console.warn("ML bias analysis failed (non-critical):", error);
+      }
+
       // Update query status to completed
       await ctx.runMutation(internal.queries.updateStatus, {
         queryId: args.queryId,

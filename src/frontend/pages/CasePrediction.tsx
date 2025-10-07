@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +19,9 @@ import {
   Briefcase,
   Mic,
   MicOff,
+  Globe,
+  Languages,
+  Sparkles,
 } from "lucide-react";
 import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -34,6 +37,9 @@ import {
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ConfidenceBadge } from "@/components/ConfidenceBadge";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function CasePrediction() {
   const [queryText, setQueryText] = useState("");
@@ -43,6 +49,19 @@ export default function CasePrediction() {
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
   const [interimTranscript, setInterimTranscript] = useState("");
+  
+  // Multilingual features
+  const [selectedLanguage, setSelectedLanguage] = useState("en");
+  const [supportedLanguages, setSupportedLanguages] = useState<any[]>([]);
+  
+  // Simplification features
+  const [simplifiedText, setSimplifiedText] = useState("");
+  const [isSimplifying, setIsSimplifying] = useState(false);
+  
+  // Simulation features
+  const [showSimulation, setShowSimulation] = useState(false);
+  const [simulationResult, setSimulationResult] = useState<any>(null);
+  const [modifications, setModifications] = useState<any>({});
 
   const createQuery = useMutation(api.queries.create);
   const analyzeWithRAG = useAction(api.rag.analyzeQuery);
@@ -56,6 +75,24 @@ export default function CasePrediction() {
   );
   const cases = useQuery(api.cases.list, {});
 
+  // Hackathon feature actions
+  const translateQuery = useAction(api.hackathonFeatures.translateQuery);
+  const translateResponse = useAction(api.hackathonFeatures.translateResponse);
+  const getSupportedLanguages = useAction(api.hackathonFeatures.getSupportedLanguages);
+  const simplifyText = useAction(api.hackathonFeatures.simplifyLegalText);
+  const simulateOutcome = useAction(api.hackathonFeatures.simulateOutcome);
+
+  // Load supported languages on mount
+  useEffect(() => {
+    const loadLanguages = async () => {
+      const result = await getSupportedLanguages({});
+      if (result.success) {
+        setSupportedLanguages(result.languages);
+      }
+    };
+    loadLanguages();
+  }, [getSupportedLanguages]);
+
   const handleSubmit = async () => {
     if (!queryText.trim()) {
       toast.error("Please enter a query");
@@ -64,13 +101,32 @@ export default function CasePrediction() {
 
     setIsAnalyzing(true);
     try {
-      const queryId = await createQuery({ queryText });
+      let processedQuery = queryText;
+      
+      // Translate query to English if non-English language selected
+      if (selectedLanguage !== "en") {
+        try {
+          const translationResult = await translateQuery({
+            text: queryText,
+            sourceLang: selectedLanguage,
+            targetLang: "en"
+          });
+          if (translationResult.success) {
+            processedQuery = translationResult.translation;
+            toast.success(`Translated from ${selectedLanguage} to English`);
+          }
+        } catch (error) {
+          console.warn("Translation failed, using original text:", error);
+        }
+      }
+      
+      const queryId = await createQuery({ queryText: processedQuery });
       setCurrentQueryId(queryId);
       
       // Send to RAG backend for analysis
       await analyzeWithRAG({ 
         queryId, 
-        queryText,
+        queryText: processedQuery,
         documentIds: undefined 
       });
       
@@ -147,6 +203,47 @@ export default function CasePrediction() {
     }
   };
 
+  const handleSimplify = async () => {
+    if (!prediction) return;
+    
+    setIsSimplifying(true);
+    try {
+      const result = await simplifyText({
+        legalText: prediction.prediction,
+        readingLevel: userMode === "citizen" ? "simple" : "intermediate"
+      });
+      
+      if (result.success) {
+        setSimplifiedText(result.simplification);
+        toast.success("Text simplified!");
+      }
+    } catch (error) {
+      toast.error("Simplification failed");
+      console.error(error);
+    } finally {
+      setIsSimplifying(false);
+    }
+  };
+
+  const handleSimulate = async () => {
+    if (!prediction) return;
+    
+    try {
+      const result = await simulateOutcome({
+        baseCaseFacts: queryText,
+        modifications
+      });
+      
+      if (result.success) {
+        setSimulationResult(result.simulation);
+        toast.success("Simulation complete!");
+      }
+    } catch (error) {
+      toast.error("Simulation failed");
+      console.error(error);
+    }
+  };
+
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "low":
@@ -180,6 +277,27 @@ export default function CasePrediction() {
       >
         <Card className="macos-card p-6 mb-6 neon-glow">
           <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Language</label>
+              <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                <SelectTrigger className="w-[200px] macos-vibrancy">
+                  <Globe className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="hi">Hindi (हिन्दी)</SelectItem>
+                  <SelectItem value="ta">Tamil (தமிழ்)</SelectItem>
+                  <SelectItem value="te">Telugu (తెలుగు)</SelectItem>
+                  <SelectItem value="bn">Bengali (বাংলা)</SelectItem>
+                  <SelectItem value="mr">Marathi (मराठी)</SelectItem>
+                  <SelectItem value="gu">Gujarati (ગુજરાતી)</SelectItem>
+                  <SelectItem value="kn">Kannada (ಕನ್ನಡ)</SelectItem>
+                  <SelectItem value="ml">Malayalam (മലയാളം)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <label className="text-sm font-medium mb-2 block">
                 Describe your case or legal question
@@ -358,13 +476,34 @@ export default function CasePrediction() {
               )}
 
               <Separator className="my-4" />
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline" className="w-full macos-vibrancy">
-                    <Info className="h-4 w-4 mr-2" />
-                    Why this prediction?
-                  </Button>
-                </SheetTrigger>
+              
+              <div className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleSimplify}
+                  disabled={isSimplifying}
+                  className="w-full macos-vibrancy"
+                >
+                  {isSimplifying ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Simplifying...
+                    </>
+                  ) : (
+                    <>
+                      <Languages className="h-4 w-4 mr-2" />
+                      Simplify to Plain Language
+                    </>
+                  )}
+                </Button>
+
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" className="w-full macos-vibrancy">
+                      <Info className="h-4 w-4 mr-2" />
+                      Why this prediction?
+                    </Button>
+                  </SheetTrigger>
                 <SheetContent className="macos-card w-full sm:max-w-xl">
                   <SheetHeader>
                     <SheetTitle>AI Reasoning</SheetTitle>
@@ -406,9 +545,26 @@ export default function CasePrediction() {
             </Card>
           </motion.div>
 
+          {simplifiedText && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6"
+            >
+              <Card className="macos-card p-6 neon-glow">
+                <div className="flex items-center gap-2 mb-3">
+                  <Languages className="h-5 w-5 text-primary" />
+                  <h4 className="font-medium">Plain Language Explanation</h4>
+                </div>
+                <p className="text-muted-foreground leading-relaxed">{simplifiedText}</p>
+              </Card>
+            </motion.div>
+          )}
+
           <motion.div
             whileHover={{ y: -8, scale: 1.02 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            className="mt-6"
           >
             <Card className="macos-card p-6 hover:shadow-2xl transition-shadow duration-300">
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
@@ -446,6 +602,142 @@ export default function CasePrediction() {
                   );
                 })}
               </div>
+            </Card>
+          </motion.div>
+
+          {/* What-If Simulation */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6"
+          >
+            <Card className="macos-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <Sparkles className="h-5 w-5" />
+                  What-If Simulation
+                </h3>
+                <Button 
+                  onClick={() => setShowSimulation(!showSimulation)}
+                  variant="ghost"
+                  size="sm"
+                >
+                  {showSimulation ? "Hide" : "Show"}
+                </Button>
+              </div>
+
+              {showSimulation && (
+                <div className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <Label className="flex items-center gap-2 p-3 macos-vibrancy rounded-lg cursor-pointer hover:bg-primary/5">
+                      <Checkbox
+                        checked={modifications.remove_prior_conviction || false}
+                        onCheckedChange={(checked) => 
+                          setModifications({...modifications, remove_prior_conviction: checked})
+                        }
+                      />
+                      <span className="text-sm">Remove Prior Conviction</span>
+                    </Label>
+
+                    <Label className="flex items-center gap-2 p-3 macos-vibrancy rounded-lg cursor-pointer hover:bg-primary/5">
+                      <Checkbox
+                        checked={modifications.add_strong_alibi || false}
+                        onCheckedChange={(checked) => 
+                          setModifications({...modifications, add_strong_alibi: checked})
+                        }
+                      />
+                      <span className="text-sm">Add Strong Alibi</span>
+                    </Label>
+
+                    <Label className="flex items-center gap-2 p-3 macos-vibrancy rounded-lg cursor-pointer hover:bg-primary/5">
+                      <Checkbox
+                        checked={modifications.improve_witness_credibility || false}
+                        onCheckedChange={(checked) => 
+                          setModifications({...modifications, improve_witness_credibility: checked})
+                        }
+                      />
+                      <span className="text-sm">Improve Witness Credibility</span>
+                    </Label>
+
+                    <Label className="flex items-center gap-2 p-3 macos-vibrancy rounded-lg cursor-pointer hover:bg-primary/5">
+                      <Checkbox
+                        checked={modifications.add_mitigating_factors || false}
+                        onCheckedChange={(checked) => 
+                          setModifications({...modifications, add_mitigating_factors: checked})
+                        }
+                      />
+                      <span className="text-sm">Add Mitigating Factors</span>
+                    </Label>
+
+                    <Label className="flex items-center gap-2 p-3 macos-vibrancy rounded-lg cursor-pointer hover:bg-primary/5">
+                      <Checkbox
+                        checked={modifications.reduce_flight_risk || false}
+                        onCheckedChange={(checked) => 
+                          setModifications({...modifications, reduce_flight_risk: checked})
+                        }
+                      />
+                      <span className="text-sm">Reduce Flight Risk</span>
+                    </Label>
+
+                    <Label className="flex items-center gap-2 p-3 macos-vibrancy rounded-lg cursor-pointer hover:bg-primary/5">
+                      <Checkbox
+                        checked={modifications.enhance_evidence || false}
+                        onCheckedChange={(checked) => 
+                          setModifications({...modifications, enhance_evidence: checked})
+                        }
+                      />
+                      <span className="text-sm">Enhance Evidence Quality</span>
+                    </Label>
+                  </div>
+
+                  <Button 
+                    onClick={handleSimulate} 
+                    className="w-full neon-glow"
+                    disabled={Object.keys(modifications).length === 0}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Run Simulation
+                  </Button>
+
+                  {simulationResult && (
+                    <div className="mt-4 space-y-4">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="bg-muted/50 p-4 rounded-lg">
+                          <h4 className="font-medium mb-2 text-sm text-muted-foreground">Base Case</h4>
+                          <p className="text-2xl font-bold capitalize">
+                            {simulationResult.base_case.prediction.predictedOutcome}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Confidence: {Math.round(simulationResult.base_case.prediction.confidenceScore * 100)}%
+                          </p>
+                        </div>
+                        
+                        <div className="bg-primary/10 p-4 rounded-lg border-2 border-primary/20">
+                          <h4 className="font-medium mb-2 text-sm text-primary">Modified Case</h4>
+                          <p className="text-2xl font-bold capitalize">
+                            {simulationResult.modified_case.prediction.predictedOutcome}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Confidence: {Math.round(simulationResult.modified_case.prediction.confidenceScore * 100)}%
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-muted/50 p-4 rounded-lg">
+                        <h4 className="font-medium mb-2">Impact Analysis</h4>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {simulationResult.impact_analysis.recommendation}
+                        </p>
+                        {simulationResult.impact_analysis.outcome_changed && (
+                          <Badge variant="default" className="mt-2">
+                            Outcome Changed: {simulationResult.impact_analysis.confidence_change_percent}% confidence shift
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
           </motion.div>
         </motion.div>

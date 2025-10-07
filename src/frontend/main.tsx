@@ -17,6 +17,7 @@ import BiasInsights from "./pages/BiasInsights.tsx";
 import Reports from "./pages/Reports.tsx";
 import DocumentLibrary from "./pages/DocumentLibrary.tsx";
 import History from "./pages/History.tsx";
+import DocumentGenerator from "./pages/DocumentGenerator.tsx";
 import "./types/global.d.ts";
 import { ThemeProvider } from "./contexts/ThemeContext.tsx";
 
@@ -76,6 +77,7 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="bias" element={<BiasInsights />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="history" element={<History />} />
+                <Route path="generator" element={<DocumentGenerator />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

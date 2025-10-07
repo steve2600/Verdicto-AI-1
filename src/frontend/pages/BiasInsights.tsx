@@ -1,13 +1,36 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, TrendingUp, Shield } from "lucide-react";
-import { useQuery } from "convex/react";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, TrendingUp, Shield, BarChart3, Loader2 } from "lucide-react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 export default function BiasInsights() {
   const predictions = useQuery(api.predictions.listByUser);
+  const [systemicBias, setSystemicBias] = useState<any>(null);
+  const [isLoadingSystemic, setIsLoadingSystemic] = useState(false);
+  const analyzeSystemicBias = useAction(api.mlBiasAnalysis.analyzeSystemicBias);
+
+  // Load systemic bias on mount
+  useEffect(() => {
+    const loadSystemicBias = async () => {
+      setIsLoadingSystemic(true);
+      try {
+        const result = await analyzeSystemicBias({});
+        if (result.success) {
+          setSystemicBias(result.systemicBias);
+        }
+      } catch (error) {
+        console.warn("Systemic bias analysis not available:", error);
+      } finally {
+        setIsLoadingSystemic(false);
+      }
+    };
+    loadSystemicBias();
+  }, [analyzeSystemicBias]);
 
   const averageBiasScore =
     predictions && predictions.length > 0
@@ -147,6 +170,117 @@ export default function BiasInsights() {
           <p className="text-sm text-muted-foreground mt-2">
             Run case predictions to see bias analysis
           </p>
+        </motion.div>
+      )}
+
+      {/* Systemic Bias Analysis */}
+      {isLoadingSystemic && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-8"
+        >
+          <Card className="glass-strong p-8">
+            <div className="flex items-center justify-center gap-3">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <p className="text-muted-foreground">Analyzing systemic bias patterns...</p>
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
+      {systemicBias && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-8"
+        >
+          <Card className="glass-strong p-6 neon-glow">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                <BarChart3 className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">Systemic Bias Analysis</h2>
+                <p className="text-sm text-muted-foreground">
+                  Historical pattern analysis across all cases
+                </p>
+              </div>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-4 mb-6">
+              <div className="glass p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-1">Total Cases Analyzed</p>
+                <p className="text-3xl font-bold">
+                  {systemicBias.biasDashboardData?.summary_metrics?.total_cases_analyzed || 0}
+                </p>
+              </div>
+              <div className="glass p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-1">Overall Conviction Rate</p>
+                <p className="text-3xl font-bold">
+                  {Math.round((systemicBias.biasDashboardData?.summary_metrics?.overall_conviction_rate || 0) * 100)}%
+                </p>
+              </div>
+              <div className="glass p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-1">Bias Flags Detected</p>
+                <p className="text-3xl font-bold text-yellow-500">
+                  {systemicBias.systemic_bias_flags?.length || 0}
+                </p>
+              </div>
+            </div>
+
+            {systemicBias.systemic_bias_flags && systemicBias.systemic_bias_flags.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-medium">Detected Disparities</h3>
+                {systemicBias.systemic_bias_flags.map((flag: string, index: number) => (
+                  <div key={index} className="glass p-3 rounded-lg flex items-center gap-3">
+                    <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                    <span className="capitalize">{flag.replace(/_/g, ' ')}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {systemicBias.biasDashboardData?.gender_analysis && (
+              <div className="mt-6">
+                <h3 className="font-medium mb-3">Gender Analysis</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {Object.entries(systemicBias.biasDashboardData.gender_analysis.disparity_data || {}).map(([gender, data]: [string, any]) => (
+                    <div key={gender} className="glass p-4 rounded-lg">
+                      <p className="text-sm font-medium capitalize mb-2">{gender}</p>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Cases</span>
+                          <span className="font-medium">{data.total_cases}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Conviction Rate</span>
+                          <span className="font-medium">{Math.round(data.conviction_rate * 100)}%</span>
+                        </div>
+                        <Progress value={data.conviction_rate * 100} className="h-2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {systemicBias.biasDashboardData?.regional_analysis && (
+              <div className="mt-6">
+                <h3 className="font-medium mb-3">Regional Analysis</h3>
+                <div className="grid md:grid-cols-3 gap-3">
+                  {Object.entries(systemicBias.biasDashboardData.regional_analysis.disparity_data || {}).map(([region, data]: [string, any]) => (
+                    <div key={region} className="glass p-3 rounded-lg">
+                      <p className="text-sm font-medium mb-1">{region}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {data.total_cases} cases · {Math.round(data.conviction_rate * 100)}% conviction
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
         </motion.div>
       )}
     </div>

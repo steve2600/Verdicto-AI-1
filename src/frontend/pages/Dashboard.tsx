@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
 import { useNavigate, Outlet } from "react-router";
-import { Loader2, Scale, Search, AlertTriangle, FileText, Menu, FileStack, History as HistoryIcon } from "lucide-react";
+import { Loader2, Scale, Search, AlertTriangle, FileText, Menu, FileStack, History as HistoryIcon, FilePenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -37,6 +37,7 @@ export default function Dashboard() {
 
   const navItems = [
     { id: "prediction", label: "Case Prediction", icon: Scale, path: "/dashboard" },
+    { id: "generator", label: "Document Generator", icon: FilePenLine, path: "/dashboard/generator" },
     { id: "documents", label: "Document Library", icon: FileStack, path: "/dashboard/documents" },
     { id: "research", label: "Legal Research", icon: Search, path: "/dashboard/research" },
     { id: "bias", label: "Bias Insights", icon: AlertTriangle, path: "/dashboard/bias" },

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const create = mutation({
@@ -214,7 +214,7 @@ export const updateBiasFlags = internalMutation({
   },
 });
 
-export const getHistoricalData = internalMutation({
+export const getHistoricalData = internalQuery({
   args: {
     timeRange: v.optional(
       v.object({
