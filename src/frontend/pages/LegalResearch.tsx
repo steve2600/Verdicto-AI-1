@@ -59,7 +59,7 @@ export default function LegalResearch() {
 
       {/* Results */}
       <div className="space-y-4">
-        {displayCases?.map((caseItem, index) => (
+        {displayCases?.map((caseItem: any, index: number) => (
           <motion.div
             key={caseItem._id}
             initial={{ opacity: 0, y: 20 }}
@@ -95,7 +95,7 @@ export default function LegalResearch() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {caseItem.tags.map((tag) => (
+                    {caseItem.tags.map((tag: string) => (
                       <Badge key={tag} variant="outline" className="text-xs">
                         {tag}
                       </Badge>

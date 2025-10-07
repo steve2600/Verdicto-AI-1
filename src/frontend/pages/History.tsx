@@ -62,8 +62,8 @@ export default function History() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {queries?.map((query, index) => {
-                const prediction = predictions?.find((p) => p.queryId === query._id);
+              {queries?.map((query: any, index: number) => {
+                const prediction = predictions?.find((p: any) => p.queryId === query._id);
                 return (
                   <motion.tr
                     key={query._id}

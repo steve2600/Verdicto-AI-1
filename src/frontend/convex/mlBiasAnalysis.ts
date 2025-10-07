@@ -57,7 +57,7 @@ export const analyzeCaseWithML = action({
         throw new Error(`ML API error: ${response.statusText}`);
       }
 
-      const result = await response.json();
+      const result: any = await response.json();
 
       // Store bias analysis results if predictionId provided
       if (args.predictionId && result.document_bias) {
@@ -167,7 +167,7 @@ export const analyzeSystemicBias = action({
       }
 
       // Transform to ML API format
-      const historicalCases = predictions.map((pred: any) => ({
+      const historicalCases: any = predictions.map((pred: any) => ({
         outcome: pred.prediction || "unknown",
         gender: pred.gender,
         region: pred.region,
@@ -177,7 +177,7 @@ export const analyzeSystemicBias = action({
       }));
 
       // Call ML API
-      const response = await fetch(`${ML_API_URL}/api/v1/analyze/systemic-bias`, {
+      const response: any = await fetch(`${ML_API_URL}/api/v1/analyze/systemic-bias`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

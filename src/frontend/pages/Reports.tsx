@@ -27,7 +27,7 @@ export default function Reports() {
       </motion.div>
 
       <div className="space-y-4">
-        {predictions?.map((prediction, index) => (
+        {predictions?.map((prediction: any, index: number) => (
           <motion.div
             key={prediction._id}
             initial={{ opacity: 0, y: 20 }}

@@ -504,7 +504,7 @@ export default function CasePrediction() {
                       Why this prediction?
                     </Button>
                   </SheetTrigger>
-                <SheetContent className="macos-card w-full sm:max-w-xl">
+                  <SheetContent className="macos-card w-full sm:max-w-xl">
                   <SheetHeader>
                     <SheetTitle>AI Reasoning</SheetTitle>
                     <SheetDescription>
@@ -542,6 +542,7 @@ export default function CasePrediction() {
                   </ScrollArea>
                 </SheetContent>
               </Sheet>
+              </div>
             </Card>
           </motion.div>
 

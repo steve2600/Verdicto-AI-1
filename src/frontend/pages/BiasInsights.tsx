@@ -93,7 +93,7 @@ export default function BiasInsights() {
       {/* Recent Predictions with Bias Flags */}
       <div className="space-y-4">
         <h2 className="text-2xl font-bold mb-4">Recent Analysis</h2>
-        {predictions?.slice(0, 5).map((prediction, index) => (
+        {predictions?.slice(0, 5).map((prediction: any, index: number) => (
           <motion.div
             key={prediction._id}
             initial={{ opacity: 0, y: 20 }}
@@ -130,7 +130,7 @@ export default function BiasInsights() {
                     Bias Flags ({prediction.biasFlags.length})
                   </h4>
                   <div className="grid gap-2">
-                    {prediction.biasFlags.map((flag, flagIndex) => (
+                    {prediction.biasFlags.map((flag: any, flagIndex: number) => (
                       <div key={flagIndex} className="glass p-3 rounded-lg flex items-center gap-3">
                         <Badge
                           variant={
