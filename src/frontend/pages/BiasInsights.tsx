@@ -19,7 +19,7 @@ export default function BiasInsights() {
     const loadSystemicBias = async () => {
       setIsLoadingSystemic(true);
       try {
-        const result = await analyzeSystemicBias({});
+        const result = await analyzeSystemicBias({ historicalCases: [] });
         if (result.success) {
           setSystemicBias(result.systemicBias);
         }

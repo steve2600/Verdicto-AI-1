@@ -79,7 +79,7 @@ export default function CasePrediction() {
   const translateQuery = useAction(api.hackathonFeatures.translateQuery);
   const translateResponse = useAction(api.hackathonFeatures.translateResponse);
   const getSupportedLanguages = useAction(api.hackathonFeatures.getSupportedLanguages);
-  const simplifyText = useAction(api.hackathonFeatures.simplifyLegalText);
+  const simplifyText = useAction(api.hackathonFeatures.simplifyText);
   const simulateOutcome = useAction(api.hackathonFeatures.simulateOutcome);
 
   // Load supported languages on mount
@@ -230,7 +230,7 @@ export default function CasePrediction() {
     
     try {
       const result = await simulateOutcome({
-        baseCaseFacts: queryText,
+        baseCase: { facts: queryText },
         modifications
       });
       

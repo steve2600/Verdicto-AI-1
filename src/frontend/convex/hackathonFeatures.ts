@@ -1,40 +1,25 @@
-/**
- * Hackathon Feature Integration
- * =============================
- * 
- * Convex actions for impressive demo features:
- * - Multilingual translation
- * - Legal document generation
- * - Plain language simplification
- * - What-if simulation
- */
-
-"use node";
-
-import { v } from "convex/values";
 import { action } from "./_generated/server";
+import { v } from "convex/values";
 
-// Hackathon features API URL
-const HACKATHON_API_URL = process.env.HACKATHON_API_URL || "http://localhost:8002";
+// Unified ML API URL (now on port 8001, same as bias analysis)
+const ML_API_URL = process.env.ML_API_URL || "http://localhost:8001";
 
-/**
- * Translate legal query to English
- */
+// Translation action
 export const translateQuery = action({
   args: {
     text: v.string(),
-    sourceLang: v.optional(v.string()),
-    targetLang: v.optional(v.string()),
+    sourceLang: v.string(),
+    targetLang: v.string(),
   },
   handler: async (ctx, args) => {
     try {
-      const response = await fetch(`${HACKATHON_API_URL}/api/v1/translate/query`, {
+      const response = await fetch(`${ML_API_URL}/api/v1/translate/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: args.text,
-          source_lang: args.sourceLang || "auto",
-          target_lang: args.targetLang || "en",
+          source_lang: args.sourceLang,
+          target_lang: args.targetLang,
         }),
       });
 
@@ -42,23 +27,15 @@ export const translateQuery = action({
         throw new Error(`Translation failed: ${response.statusText}`);
       }
 
-      const result = await response.json();
-      return {
-        success: true,
-        translation: result.translation,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Translation failed",
-      };
+      return await response.json();
+    } catch (error: any) {
+      console.error("Translation error:", error);
+      throw new Error(`Translation failed: ${error.message}`);
     }
   },
 });
 
-/**
- * Translate AI response to user's language
- */
+// Translate response action
 export const translateResponse = action({
   args: {
     text: v.string(),
@@ -66,7 +43,7 @@ export const translateResponse = action({
   },
   handler: async (ctx, args) => {
     try {
-      const response = await fetch(`${HACKATHON_API_URL}/api/v1/translate/response`, {
+      const response = await fetch(`${ML_API_URL}/api/v1/translate/response`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -79,36 +56,50 @@ export const translateResponse = action({
         throw new Error(`Translation failed: ${response.statusText}`);
       }
 
-      const result = await response.json();
-      return {
-        success: true,
-        translation: result.translation,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Translation failed",
-      };
+      return await response.json();
+    } catch (error: any) {
+      console.error("Translation error:", error);
+      throw new Error(`Translation failed: ${error.message}`);
     }
   },
 });
 
-/**
- * Simplify legal text to plain language
- */
-export const simplifyLegalText = action({
+// Get supported languages action
+export const getSupportedLanguages = action({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      const response = await fetch(`${ML_API_URL}/api/v1/languages`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get languages: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error("Get languages error:", error);
+      throw new Error(`Get languages failed: ${error.message}`);
+    }
+  },
+});
+
+// Simplification action
+export const simplifyText = action({
   args: {
     legalText: v.string(),
-    readingLevel: v.optional(v.string()),
+    readingLevel: v.string(),
   },
   handler: async (ctx, args) => {
     try {
-      const response = await fetch(`${HACKATHON_API_URL}/api/v1/simplify`, {
+      const response = await fetch(`${ML_API_URL}/api/v1/simplify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           legal_text: args.legalText,
-          reading_level: args.readingLevel || "simple",
+          reading_level: args.readingLevel,
         }),
       });
 
@@ -116,23 +107,15 @@ export const simplifyLegalText = action({
         throw new Error(`Simplification failed: ${response.statusText}`);
       }
 
-      const result = await response.json();
-      return {
-        success: true,
-        simplification: result.simplification,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Simplification failed",
-      };
+      return await response.json();
+    } catch (error: any) {
+      console.error("Simplification error:", error);
+      throw new Error(`Simplification failed: ${error.message}`);
     }
   },
 });
 
-/**
- * Generate legal document
- */
+// Document generation action
 export const generateDocument = action({
   args: {
     documentType: v.string(),
@@ -140,7 +123,7 @@ export const generateDocument = action({
   },
   handler: async (ctx, args) => {
     try {
-      const response = await fetch(`${HACKATHON_API_URL}/api/v1/generate/document`, {
+      const response = await fetch(`${ML_API_URL}/api/v1/generate/document`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -153,37 +136,49 @@ export const generateDocument = action({
         throw new Error(`Document generation failed: ${response.statusText}`);
       }
 
-      const result = await response.json();
-      return {
-        success: true,
-        document: result.document,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Document generation failed",
-      };
+      return await response.json();
+    } catch (error: any) {
+      console.error("Document generation error:", error);
+      throw new Error(`Document generation failed: ${error.message}`);
     }
   },
 });
 
-/**
- * What-if simulation
- */
+// Get document templates action
+export const getDocumentTemplates = action({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      const response = await fetch(`${ML_API_URL}/api/v1/templates`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get templates: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error("Get templates error:", error);
+      throw new Error(`Get templates failed: ${error.message}`);
+    }
+  },
+});
+
+// Simulation action
 export const simulateOutcome = action({
   args: {
-    baseCaseFacts: v.string(),
+    baseCase: v.any(),
     modifications: v.any(),
   },
   handler: async (ctx, args) => {
     try {
-      const response = await fetch(`${HACKATHON_API_URL}/api/v1/simulate/outcome`, {
+      const response = await fetch(`${ML_API_URL}/api/v1/simulate/outcome`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          base_case: {
-            facts: args.baseCaseFacts,
-          },
+          base_case: args.baseCase,
           modifications: args.modifications,
         }),
       });
@@ -192,30 +187,22 @@ export const simulateOutcome = action({
         throw new Error(`Simulation failed: ${response.statusText}`);
       }
 
-      const result = await response.json();
-      return {
-        success: true,
-        simulation: result.simulation,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Simulation failed",
-      };
+      return await response.json();
+    } catch (error: any) {
+      console.error("Simulation error:", error);
+      throw new Error(`Simulation failed: ${error.message}`);
     }
   },
 });
 
-/**
- * Sensitivity analysis
- */
+// Sensitivity analysis action
 export const sensitivityAnalysis = action({
   args: {
     caseFacts: v.string(),
   },
   handler: async (ctx, args) => {
     try {
-      const response = await fetch(`${HACKATHON_API_URL}/api/v1/simulate/sensitivity`, {
+      const response = await fetch(`${ML_API_URL}/api/v1/simulate/sensitivity`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -227,98 +214,10 @@ export const sensitivityAnalysis = action({
         throw new Error(`Sensitivity analysis failed: ${response.statusText}`);
       }
 
-      const result = await response.json();
-      return {
-        success: true,
-        sensitivity: result.sensitivity,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Sensitivity analysis failed",
-      };
+      return await response.json();
+    } catch (error: any) {
+      console.error("Sensitivity analysis error:", error);
+      throw new Error(`Sensitivity analysis failed: ${error.message}`);
     }
   },
 });
-
-/**
- * Get supported languages
- */
-export const getSupportedLanguages = action({
-  args: {},
-  handler: async (ctx) => {
-    try {
-      const response = await fetch(`${HACKATHON_API_URL}/api/v1/languages`);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch languages: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return {
-        success: true,
-        languages: result.languages,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to fetch languages",
-      };
-    }
-  },
-});
-
-/**
- * Get document templates
- */
-export const getDocumentTemplates = action({
-  args: {},
-  handler: async (ctx) => {
-    try {
-      const response = await fetch(`${HACKATHON_API_URL}/api/v1/templates`);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch templates: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return {
-        success: true,
-        templates: result.templates,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to fetch templates",
-      };
-    }
-  },
-});
-
-/**
- * Get complete demo (for judges)
- */
-export const getCompleteDemo = action({
-  args: {},
-  handler: async (ctx) => {
-    try {
-      const response = await fetch(`${HACKATHON_API_URL}/api/v1/demo/complete`);
-
-      if (!response.ok) {
-        throw new Error(`Demo failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return {
-        success: true,
-        demo: result,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Demo failed",
-      };
-    }
-  },
-});
-
