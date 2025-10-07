@@ -1,6 +1,11 @@
-├── app.py              → FastAPI application setup
-├── main.py             → Entry point
-├── ingest.py           → Document chunking & embedding
-├── qa_chain.py         → RAG chain (retrieval + generation)
-├── utils.py            → Helper functions
-└── rerankers/          → Cross-encoder reranking logic
+import os
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8001))  # Use Railway's PORT or default to 8001
+    uvicorn.run(
+        "api:app",
+        host="0.0.0.0",
+        port=port,
+        reload=True,
+        log_level="info"
+    )
