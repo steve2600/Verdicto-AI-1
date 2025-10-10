@@ -31,22 +31,55 @@ import weaviate
 # === Load environment variables ===
 load_dotenv()
 
-# === ULTRA-FAST LLM Setup ===
-llm = ChatGroq(
-    groq_api_key=os.getenv("GROQ_API_KEY"),
-    model_name="llama-3.1-8b-instant",
-    temperature=0,
-    max_tokens=512,
-    timeout=15,
-    streaming=False
-)
+# === ULTRA-FAST LLM Setup (Lazy Initialization) ===
+_llm = None
 
-# === Embeddings Setup ===
-embeddings = VoyageAIEmbeddings(
-    model="voyage-3-large",
-    voyage_api_key=os.getenv("VOYAGE_API_KEY"),
-    batch_size=128,
-)
+def get_llm():
+    """Lazy initialization of LLM"""
+    global _llm
+    
+    if _llm is not None:
+        return _llm
+    
+    try:
+        _llm = ChatGroq(
+            groq_api_key=os.getenv("GROQ_API_KEY"),
+            model_name="llama-3.1-8b-instant",
+            temperature=0,
+            max_tokens=512,
+            timeout=15,
+            streaming=False
+        )
+        print("✅ LLM initialized successfully")
+    except Exception as e:
+        print(f"❌ LLM initialization failed: {e}")
+        raise RuntimeError(f"Failed to initialize LLM: {e}")
+    
+    return _llm
+
+
+# === Embeddings Setup (Lazy Initialization) ===
+_embeddings = None
+
+def get_embeddings():
+    """Lazy initialization of embeddings"""
+    global _embeddings
+    
+    if _embeddings is not None:
+        return _embeddings
+    
+    try:
+        _embeddings = VoyageAIEmbeddings(
+            model="voyage-3-large",
+            voyage_api_key=os.getenv("VOYAGE_API_KEY"),
+            batch_size=128,
+        )
+        print("✅ Embeddings initialized successfully")
+    except Exception as e:
+        print(f"❌ Embeddings initialization failed: {e}")
+        raise RuntimeError(f"Failed to initialize embeddings: {e}")
+    
+    return _embeddings
 
 # === Cross-Encoder Setup (Load once at startup for Railway) ===
 cross_encoder = None
@@ -126,7 +159,8 @@ class UltraFastRetriever(BaseRetriever):
         try:
             weaviate_client = get_weaviate_client()
             collection = weaviate_client.collections.get(self._index_name)
-            query_vector = self._vectorstore._embedding.embed_query(query)
+            embeddings = get_embeddings()
+            query_vector = embeddings.embed_query(query)
             initial_k = min(self._k * 3, 20) if self._use_reranking else self._k
 
             response = collection.query.hybrid(
@@ -163,7 +197,8 @@ class UltraFastRetriever(BaseRetriever):
         try:
             weaviate_client = get_weaviate_client()
             collection = weaviate_client.collections.get(self._index_name)
-            query_vector = self._vectorstore._embedding.embed_query(query)
+            embeddings = get_embeddings()
+            query_vector = embeddings.embed_query(query)
             initial_k = min(self._k * 3, 20) if self._use_reranking else self._k
 
             response = collection.query.hybrid(
@@ -231,6 +266,7 @@ def get_unique_collection_name():
 
 async def create_ultra_fast_vectorstore(docs: List[Document]):
     collection_name = get_unique_collection_name()
+    embeddings = get_embeddings()
     temp_vectorstore = WeaviateVectorStore(
         client=get_weaviate_client(),
         index_name=collection_name,
@@ -263,10 +299,10 @@ def get_cleanup_wrapper(collection_name: str):
 async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = True):
     k = get_ultra_fast_k(len(docs))
     temp_vectorstore, collection_name = await create_ultra_fast_vectorstore(docs)
+    llm = get_llm()
 
     retriever = UltraFastRetriever(
         vectorstore=temp_vectorstore,
-        weaviate_client=get_weaviate_client(),
         index_name=collection_name,
         k=k,
         alpha=0.3,
