@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -144,7 +143,6 @@ export default function Dashboard() {
           <Outlet />
         </main>
       </div>
-      <DisclaimerBanner />
     </div>
   );
 }
