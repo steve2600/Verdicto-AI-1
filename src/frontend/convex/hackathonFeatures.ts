@@ -2,7 +2,7 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 
 // Unified ML API URL (contains both bias analysis and hackathon features)
-const ML_API_URL = process.env.ML_API_URL || "http://localhost:8001";
+const ML_API_URL = process.env.ML_API_URL || "https://a-i-c-a-verdicto-ml.hf.space";
 
 // Translation action
 export const translateQuery = action({
