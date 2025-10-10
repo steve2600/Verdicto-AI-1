@@ -3,22 +3,17 @@ Enhanced RAG utils for insurance documents - Semantic Similarity approach
 Supports PDF, DOCX, and Email processing with semantic similarity-based chunking
 """
 
-import numpy as np
-from typing import List, Dict, Optional, Union
-import asyncio
-import httpx
-import json
 import os
-import tempfile
-import traceback
 import re
+import json
+import tempfile
+import asyncio
 from pathlib import Path
-from collections import defaultdict
-import email
-import mimetypes
+from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime
+import httpx
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.document_loaders.word_document import Docx2txtLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -51,26 +46,7 @@ if not VOYAGE_API_KEY:
 
 def extract_pdf_preview(file_path: str) -> str:
     """Extract first 50 words from PDF for preview"""
-    if not PyPDF2:
-        return "PyPDF2 not available"
-
-    try:
-        with open(file_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-
-            if len(pdf_reader.pages) > 0:
-                first_page_text = pdf_reader.pages[0].extract_text()
-
-                # Clean up the text and get first 50 words
-                words = first_page_text.strip().split()
-                preview_words = words[:50] if len(words) >= 50 else words
-
-                return ' '.join(preview_words) + ('...' if len(words) > 50 else '')
-
-        return "Could not extract preview"
-
-    except Exception:
-        return "Could not extract preview"
+    return "PDF preview disabled"
 
 
 def extract_docx_preview(file_path: str) -> str:
@@ -1159,3 +1135,6 @@ if __name__ == "__main__":
 
                 except Exception as e:
                     print(f"Error loading {file_path}: {e}")
+
+    # Run the test
+    asyncio.run(test_example())
