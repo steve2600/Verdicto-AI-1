@@ -1,8 +1,7 @@
-# Install dependencies first
+export CONVEX_DEPLOY_KEY="your-deploy-key-here"
+
+# Install dependencies
 pnpm install
 
-# Start Convex dev server
-npx convex dev
-
-# In another terminal, start the frontend
+# Run dev server
 pnpm dev
