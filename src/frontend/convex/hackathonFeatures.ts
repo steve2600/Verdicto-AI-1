@@ -1,24 +1,26 @@
+"use node";
+
 import { action } from "./_generated/server";
 import { v } from "convex/values";
 
-// Unified ML API URL (now on port 8001, same as bias analysis)
-const ML_API_URL = process.env.ML_API_URL || "http://localhost:8001";
+const ML_API_URL = process.env.ML_API_URL || "https://a-i-c-a-verdicto-ml.hf.space";
 
-// Translation action
 export const translateQuery = action({
   args: {
     text: v.string(),
-    sourceLang: v.string(),
+    sourceLang: v.optional(v.string()),
     targetLang: v.string(),
   },
   handler: async (ctx, args) => {
     try {
       const response = await fetch(`${ML_API_URL}/api/v1/translate/query`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           text: args.text,
-          source_lang: args.sourceLang,
+          source_lang: args.sourceLang || "auto",
           target_lang: args.targetLang,
         }),
       });
@@ -27,15 +29,14 @@ export const translateQuery = action({
         throw new Error(`Translation failed: ${response.statusText}`);
       }
 
-      return await response.json();
-    } catch (error: any) {
-      console.error("Translation error:", error);
-      throw new Error(`Translation failed: ${error.message}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`Translation error: ${error}`);
     }
   },
 });
 
-// Translate response action
 export const translateResponse = action({
   args: {
     text: v.string(),
@@ -45,7 +46,9 @@ export const translateResponse = action({
     try {
       const response = await fetch(`${ML_API_URL}/api/v1/translate/response`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           text: args.text,
           target_lang: args.targetLang,
@@ -56,50 +59,52 @@ export const translateResponse = action({
         throw new Error(`Translation failed: ${response.statusText}`);
       }
 
-      return await response.json();
-    } catch (error: any) {
-      console.error("Translation error:", error);
-      throw new Error(`Translation failed: ${error.message}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`Translation error: ${error}`);
     }
   },
 });
 
-// Get supported languages action
 export const getSupportedLanguages = action({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
     try {
       const response = await fetch(`${ML_API_URL}/api/v1/languages`, {
         method: "GET",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to get languages: ${response.statusText}`);
+        throw new Error(`Get languages failed: ${response.statusText}`);
       }
 
-      return await response.json();
-    } catch (error: any) {
-      console.error("Get languages error:", error);
-      throw new Error(`Get languages failed: ${error.message}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`Get languages failed: ${error}`);
     }
   },
 });
 
-// Simplification action
 export const simplifyText = action({
   args: {
     legalText: v.string(),
-    readingLevel: v.string(),
+    readingLevel: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     try {
       const response = await fetch(`${ML_API_URL}/api/v1/simplify`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           legal_text: args.legalText,
-          reading_level: args.readingLevel,
+          reading_level: args.readingLevel || "simple",
         }),
       });
 
@@ -107,15 +112,14 @@ export const simplifyText = action({
         throw new Error(`Simplification failed: ${response.statusText}`);
       }
 
-      return await response.json();
-    } catch (error: any) {
-      console.error("Simplification error:", error);
-      throw new Error(`Simplification failed: ${error.message}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`Simplification error: ${error}`);
     }
   },
 });
 
-// Document generation action
 export const generateDocument = action({
   args: {
     documentType: v.string(),
@@ -125,7 +129,9 @@ export const generateDocument = action({
     try {
       const response = await fetch(`${ML_API_URL}/api/v1/generate/document`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           document_type: args.documentType,
           details: args.details,
@@ -136,37 +142,37 @@ export const generateDocument = action({
         throw new Error(`Document generation failed: ${response.statusText}`);
       }
 
-      return await response.json();
-    } catch (error: any) {
-      console.error("Document generation error:", error);
-      throw new Error(`Document generation failed: ${error.message}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`Document generation error: ${error}`);
     }
   },
 });
 
-// Get document templates action
 export const getDocumentTemplates = action({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
     try {
       const response = await fetch(`${ML_API_URL}/api/v1/templates`, {
         method: "GET",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to get templates: ${response.statusText}`);
+        throw new Error(`Get templates failed: ${response.statusText}`);
       }
 
-      return await response.json();
-    } catch (error: any) {
-      console.error("Get templates error:", error);
-      throw new Error(`Get templates failed: ${error.message}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`Get templates error: ${error}`);
     }
   },
 });
 
-// Simulation action
 export const simulateOutcome = action({
   args: {
     baseCase: v.any(),
@@ -176,7 +182,9 @@ export const simulateOutcome = action({
     try {
       const response = await fetch(`${ML_API_URL}/api/v1/simulate/outcome`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           base_case: args.baseCase,
           modifications: args.modifications,
@@ -187,15 +195,14 @@ export const simulateOutcome = action({
         throw new Error(`Simulation failed: ${response.statusText}`);
       }
 
-      return await response.json();
-    } catch (error: any) {
-      console.error("Simulation error:", error);
-      throw new Error(`Simulation failed: ${error.message}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`Simulation error: ${error}`);
     }
   },
 });
 
-// Sensitivity analysis action
 export const sensitivityAnalysis = action({
   args: {
     caseFacts: v.string(),
@@ -204,7 +211,9 @@ export const sensitivityAnalysis = action({
     try {
       const response = await fetch(`${ML_API_URL}/api/v1/simulate/sensitivity`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           case_facts: args.caseFacts,
         }),
@@ -214,10 +223,10 @@ export const sensitivityAnalysis = action({
         throw new Error(`Sensitivity analysis failed: ${response.statusText}`);
       }
 
-      return await response.json();
-    } catch (error: any) {
-      console.error("Sensitivity analysis error:", error);
-      throw new Error(`Sensitivity analysis failed: ${error.message}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`Sensitivity analysis error: ${error}`);
     }
   },
 });
