@@ -13,7 +13,7 @@ const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL || "https://verdicto-ai-1-pr
 export const processDocument = action({
   args: {
     documentId: v.id("documents"),
-    fileUrl: v.string(),
+    fileUrl: v.id("_storage"),
     title: v.string(),
   },
   handler: async (ctx, args) => {
@@ -24,8 +24,15 @@ export const processDocument = action({
         status: "processing",
       });
 
+      // Get the actual URL from Convex storage
+      const actualFileUrl = await ctx.storage.getUrl(args.fileUrl);
+      
+      if (!actualFileUrl) {
+        throw new Error("Failed to get file URL from storage");
+      }
+
       // The backend expects a 'documents' URL and 'questions' array
-      // For document ingestion, we'll send an empty questions array
+      // For document ingestion, we'll send a summary question
       const response = await fetch(`${RAG_BACKEND_URL}/api/v1/hackrx/run`, {
         method: "POST",
         headers: {
@@ -33,7 +40,7 @@ export const processDocument = action({
           "Authorization": "Bearer 8ad62148045cbf8137a66e1d8c0974e14f62a970b4fa91afb850f461abfbadb8",
         },
         body: JSON.stringify({
-          documents: args.fileUrl,
+          documents: actualFileUrl,
           questions: [`Summarize the key points of ${args.title}`],
         }),
       });

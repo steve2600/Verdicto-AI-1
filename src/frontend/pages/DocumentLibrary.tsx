@@ -35,6 +35,8 @@ export default function DocumentLibrary() {
     jurisdiction: selectedJurisdiction || undefined,
   });
   const processDocumentWithRAG = useAction(api.rag.processDocument);
+  const createDocument = useMutation(api.documents.create);
+  const generateUploadUrl = useMutation(api.documents.generateUploadUrl);
 
   const filteredDocuments = documents?.filter((doc: any) =>
     searchTerm.length > 0
@@ -70,13 +72,69 @@ export default function DocumentLibrary() {
     );
   };
 
-  const handleUpload = () => {
-    toast.info("Document upload feature coming soon!");
-    // TODO: Implement file upload that calls processDocumentWithRAG
-    // Example flow:
-    // 1. Upload file to Convex storage
-    // 2. Create document record
-    // 3. Call processDocumentWithRAG with document ID and file URL
+  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== "application/pdf") {
+      toast.error("Only PDF files are supported");
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size must be less than 10MB");
+      return;
+    }
+
+    try {
+      toast.info("Uploading document...");
+
+      // Step 1: Get upload URL from Convex
+      const uploadUrl = await generateUploadUrl();
+
+      // Step 2: Upload file to Convex storage
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload file");
+      }
+
+      const { storageId } = await uploadResponse.json();
+
+      // Step 3: Create document record
+      const documentId = await createDocument({
+        title: file.name.replace(".pdf", ""),
+        jurisdiction: "General",
+        fileId: storageId,
+        metadata: {
+          documentType: "Legal Document",
+          version: "1.0",
+          fileSize: file.size,
+        },
+      });
+
+      toast.success("Document uploaded successfully!");
+
+      // Step 4: Process document with RAG backend
+      toast.info("Processing document with AI...");
+      
+      await processDocumentWithRAG({
+        documentId,
+        fileUrl: storageId,
+        title: file.name.replace(".pdf", ""),
+      });
+
+      toast.success("Document processed and ready for analysis!");
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error(`Upload failed: ${error}`);
+    }
   };
 
   return (
@@ -100,19 +158,28 @@ export default function DocumentLibrary() {
         className="mb-6"
       >
         <Card className="macos-card p-8 border-dashed border-2 hover:border-primary/50 macos-transition cursor-pointer">
-          <div className="text-center" onClick={handleUpload}>
-            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4 neon-glow">
-              <Upload className="h-8 w-8 text-primary" />
+          <label htmlFor="file-upload" className="cursor-pointer">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4 neon-glow">
+                <Upload className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold mb-2">Upload Legal Documents</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Drag and drop PDF files here, or click to browse (Max 10MB)
+              </p>
+              <Button type="button" className="neon-glow">
+                <Upload className="h-4 w-4 mr-2" />
+                Select Files
+              </Button>
             </div>
-            <h3 className="text-lg font-bold mb-2">Upload Legal Documents</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Drag and drop PDF files here, or click to browse
-            </p>
-            <Button className="neon-glow">
-              <Upload className="h-4 w-4 mr-2" />
-              Select Files
-            </Button>
-          </div>
+          </label>
+          <input
+            id="file-upload"
+            type="file"
+            accept="application/pdf"
+            onChange={handleUpload}
+            className="hidden"
+          />
         </Card>
       </motion.div>
 
