@@ -1,8 +1,10 @@
-POST https://verdicto-ai-production.up.railway.app/api/v1/hackrx/run
 {
-  "documents": "https://example.com/legal-document.pdf",
-  "questions": [
-    "What is the main issue in this case?",
-    "What was the court's decision?"
-  ]
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
+  },
+  "deploy": {
+    "startCommand": "uvicorn app.main:app --host 0.0.0.0 --port 8001",
+    ...
+  }
 }
