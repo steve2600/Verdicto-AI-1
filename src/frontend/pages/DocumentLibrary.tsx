@@ -157,29 +157,29 @@ export default function DocumentLibrary() {
         transition={{ delay: 0.1 }}
         className="mb-6"
       >
-        <Card className="macos-card p-8 border-dashed border-2 hover:border-primary/50 macos-transition cursor-pointer">
-          <label htmlFor="file-upload" className="cursor-pointer">
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4 neon-glow">
-                <Upload className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-bold mb-2">Upload Legal Documents</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Drag and drop PDF files here, or click to browse (Max 10MB)
-              </p>
-              <Button type="button" className="neon-glow">
+        <Card className="macos-card p-8 border-dashed border-2 hover:border-primary/50 macos-transition">
+          <div className="text-center">
+            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4 neon-glow">
+              <Upload className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-lg font-bold mb-2">Upload Legal Documents</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Drag and drop PDF files here, or click to browse (Max 10MB)
+            </p>
+            <label htmlFor="file-upload" className="cursor-pointer inline-block">
+              <Button type="button" className="neon-glow pointer-events-none">
                 <Upload className="h-4 w-4 mr-2" />
                 Select Files
               </Button>
-            </div>
-          </label>
-          <input
-            id="file-upload"
-            type="file"
-            accept="application/pdf"
-            onChange={handleUpload}
-            className="hidden"
-          />
+            </label>
+            <input
+              id="file-upload"
+              type="file"
+              accept="application/pdf"
+              onChange={handleUpload}
+              className="hidden"
+            />
+          </div>
         </Card>
       </motion.div>
 
