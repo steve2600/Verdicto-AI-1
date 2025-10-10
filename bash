@@ -1,4 +1,4 @@
-   git add render.yaml
-   git commit -m "Add root-level render.yaml for Render deployment"
-   git push origin main
-   
+GROQ_API_KEY="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"
+VOYAGE_API_KEY="pa-X30T2OWOXau-zL2wXAJgydOptT7RHVfx7oI6ObM1ItK"
+WEAVIATE_API_KEY="ZVpHZTJpeTg1OFBNbVJMZV83ZnN5U1hXdjJYZXI2R1AwakFZYTRycWxlRW5OWUVBZ1BSNW5seUtoL29nPV92MjAw"
+WEAVIATE_URL="https://fufjwaaqt5wgwhyiueuvfa.c0.asia-southeast1.gcp.weaviate.cloud/v1"
