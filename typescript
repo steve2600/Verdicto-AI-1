@@ -1,11 +1,1 @@
-// Temporarily disabled - ML backend not yet deployed
-// try {
-//   await ctx.runAction(internal.mlBiasAnalysis.analyzeCaseWithML, {
-//     caseText: args.queryText,
-//     ragSummary: ragResponse,
-//     sourceDocuments: sources.map((s: any) => s.content || s.text || ""),
-//     predictionId,
-//   });
-// } catch (error) {
-//   console.warn("ML bias analysis failed (non-critical):", error);
-// }
+const fileUrl = `${window.location.origin}/api/storage/${storageId}`;

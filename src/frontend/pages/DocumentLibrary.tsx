@@ -123,10 +123,10 @@ export default function DocumentLibrary() {
       toast.success("Document uploaded successfully!");
       
       // Step 4: Process with RAG backend (in background)
-      const fileUrl = `${window.location.origin}/api/storage/${storageId}`;
+      // Use the storageId directly - RAG backend will fetch from Convex
       processDocumentWithRAG({
         documentId,
-        fileUrl,
+        fileUrl: storageId, // Pass storageId instead of constructed URL
         title: file.name,
       })
         .then(() => {
