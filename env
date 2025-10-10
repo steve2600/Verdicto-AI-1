@@ -1,0 +1,8 @@
+# Frontend - connects to Convex backend
+VITE_CONVEX_URL=https://harmless-tapir-303.convex.cloud
+
+# Backend - for Convex CLI authentication
+CONVEX_DEPLOY_KEY=your-actual-deploy-key-here
+
+# Optional: Deployment name (usually auto-detected)
+CONVEX_DEPLOYMENT=prod:your-deployment-name
