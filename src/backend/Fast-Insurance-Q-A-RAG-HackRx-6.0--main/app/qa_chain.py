@@ -69,21 +69,40 @@ def get_cross_encoder():
     return cross_encoder
 
 
-# === Weaviate Client Setup ===
+# === Weaviate Client Setup (Lazy Initialization) ===
 weaviate_url = os.getenv("WEAVIATE_URL")
 weaviate_api_key = os.getenv("WEAVIATE_API_KEY")
+_weaviate_client = None
 
-try:
-    weaviate_client = weaviate.connect_to_weaviate_cloud(
-        cluster_url=weaviate_url,
-        auth_credentials=Auth.api_key(weaviate_api_key) if weaviate_api_key else None,
-        timeout_config=(10, 60)
-    )
-except Exception:
-    weaviate_client = weaviate.connect_to_weaviate_cloud(
-        cluster_url=weaviate_url,
-        auth_credentials=Auth.api_key(weaviate_api_key) if weaviate_api_key else None
-    )
+
+def get_weaviate_client():
+    """Lazy initialization of Weaviate client"""
+    global _weaviate_client
+    
+    if _weaviate_client is not None:
+        return _weaviate_client
+    
+    try:
+        _weaviate_client = weaviate.connect_to_weaviate_cloud(
+            cluster_url=weaviate_url,
+            auth_credentials=Auth.api_key(weaviate_api_key) if weaviate_api_key else None,
+            timeout_config=(10, 60)
+        )
+        print("✅ Weaviate client connected successfully")
+    except Exception as e:
+        print(f"⚠️ Weaviate connection failed, retrying without timeout config: {e}")
+        try:
+            _weaviate_client = weaviate.connect_to_weaviate_cloud(
+                cluster_url=weaviate_url,
+                auth_credentials=Auth.api_key(weaviate_api_key) if weaviate_api_key else None
+            )
+            print("✅ Weaviate client connected successfully (retry)")
+        except Exception as retry_error:
+            print(f"❌ Weaviate connection failed: {retry_error}")
+            raise RuntimeError(f"Failed to connect to Weaviate: {retry_error}")
+    
+    return _weaviate_client
+
 
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.documents import Document
@@ -92,11 +111,10 @@ from typing import List
 
 
 class UltraFastRetriever(BaseRetriever):
-    def __init__(self, vectorstore, weaviate_client, index_name: str, k: int = 4, alpha: float = 0.2,
+    def __init__(self, vectorstore, index_name: str, k: int = 4, alpha: float = 0.2,
                  use_reranking: bool = True, **kwargs):
         super().__init__(**kwargs)
         self._vectorstore = vectorstore
-        self._weaviate_client = weaviate_client
         self._index_name = index_name
         self._k = k
         self._alpha = alpha
@@ -106,7 +124,8 @@ class UltraFastRetriever(BaseRetriever):
         Document]:
         """Synchronous version - directly calls the retrieval logic"""
         try:
-            collection = self._weaviate_client.collections.get(self._index_name)
+            weaviate_client = get_weaviate_client()
+            collection = weaviate_client.collections.get(self._index_name)
             query_vector = self._vectorstore._embedding.embed_query(query)
             initial_k = min(self._k * 3, 20) if self._use_reranking else self._k
 
@@ -142,7 +161,8 @@ class UltraFastRetriever(BaseRetriever):
             self, query: str, *, run_manager: CallbackManagerForRetrieverRun = None
     ) -> List[Document]:
         try:
-            collection = self._weaviate_client.collections.get(self._index_name)
+            weaviate_client = get_weaviate_client()
+            collection = weaviate_client.collections.get(self._index_name)
             query_vector = self._vectorstore._embedding.embed_query(query)
             initial_k = min(self._k * 3, 20) if self._use_reranking else self._k
 
@@ -212,7 +232,7 @@ def get_unique_collection_name():
 async def create_ultra_fast_vectorstore(docs: List[Document]):
     collection_name = get_unique_collection_name()
     temp_vectorstore = WeaviateVectorStore(
-        client=weaviate_client,
+        client=get_weaviate_client(),
         index_name=collection_name,
         text_key="text",
         embedding=embeddings
@@ -223,8 +243,8 @@ async def create_ultra_fast_vectorstore(docs: List[Document]):
 
 async def cleanup_collection(collection_name: str):
     try:
-        if weaviate_client.collections.exists(collection_name):
-            collection = weaviate_client.collections.get(collection_name)
+        if get_weaviate_client().collections.exists(collection_name):
+            collection = get_weaviate_client().collections.get(collection_name)
             collection.delete()
     except:
         pass
@@ -246,7 +266,7 @@ async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = Tr
 
     retriever = UltraFastRetriever(
         vectorstore=temp_vectorstore,
-        weaviate_client=weaviate_client,
+        weaviate_client=get_weaviate_client(),
         index_name=collection_name,
         k=k,
         alpha=0.3,
@@ -299,8 +319,7 @@ async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = Tr
 
 def cleanup_client():
     try:
-        if weaviate_client and weaviate_client.is_connected():
-            weaviate_client.close()
+        if get_weaviate_client() and get_weaviate_client().is_connected():
+            get_weaviate_client().close()
     except:
         pass
-
