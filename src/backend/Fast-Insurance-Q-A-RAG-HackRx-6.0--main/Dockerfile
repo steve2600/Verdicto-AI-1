@@ -22,7 +22,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     httpx==0.28.1 \
     groq==0.30.0 \
     voyageai==0.3.4 \
-    PyMuPDF==1.26.3 && \
+    PyMuPDF==1.26.3 \
+    pypdf==5.1.0 && \
     pip install --no-cache-dir \
     langchain==0.3.27 \
     langchain-community==0.3.27 \
