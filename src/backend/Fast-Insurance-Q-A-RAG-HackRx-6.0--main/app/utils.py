@@ -8,6 +8,7 @@ import re
 import json
 import tempfile
 import asyncio
+import traceback
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
