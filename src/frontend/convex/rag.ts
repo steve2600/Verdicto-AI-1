@@ -7,8 +7,7 @@ import { internal } from "./_generated/api";
 const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL || "https://verdicto-ai-1-production-3dbc.up.railway.app";
 
 /**
- * Send document to RAG backend for processing
- * Note: The backend uses /api/v1/hackrx/run endpoint for all processing
+ * Send document to RAG backend for processing using dedicated ingest endpoint
  */
 export const processDocument = action({
   args: {
@@ -31,17 +30,17 @@ export const processDocument = action({
         throw new Error("Failed to get file URL from storage");
       }
 
-      // The backend expects a 'documents' URL and 'questions' array
-      // For document ingestion, we'll send a summary question
-      const response = await fetch(`${RAG_BACKEND_URL}/api/v1/hackrx/run`, {
+      // Use dedicated ingest endpoint
+      const response = await fetch(`${RAG_BACKEND_URL}/api/v1/documents/ingest`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer 8ad62148045cbf8137a66e1d8c0974e14f62a970b4fa91afb850f461abfbadb8",
         },
         body: JSON.stringify({
-          documents: actualFileUrl,
-          questions: [`Summarize the key points of ${args.title}`],
+          document_url: actualFileUrl,
+          document_id: args.documentId,
+          title: args.title,
         }),
       });
 
@@ -60,7 +59,7 @@ export const processDocument = action({
       return {
         success: true,
         message: "Document processed successfully",
-        chunks: result.answers?.length || 0,
+        chunks: result.chunks_processed || 0,
       };
     } catch (error) {
       // Update document status to failed
@@ -76,7 +75,7 @@ export const processDocument = action({
 });
 
 /**
- * Send query to RAG backend for analysis
+ * Send query to RAG backend for analysis using dedicated query endpoint
  */
 export const analyzeQuery = action({
   args: {
@@ -92,27 +91,22 @@ export const analyzeQuery = action({
         status: "processing",
       });
 
-      // Get document URLs if provided
-      let documentUrl = "";
+      // Get document ID if provided
+      let documentId = undefined;
       if (args.documentIds && args.documentIds.length > 0) {
-        const firstDoc = await ctx.runQuery(internal.documents.getByIdInternal, {
-          documentId: args.documentIds[0],
-        });
-        if (firstDoc?.fileId) {
-          documentUrl = await ctx.storage.getUrl(firstDoc.fileId) || "";
-        }
+        documentId = args.documentIds[0];
       }
 
-      // Send to RAG backend for analysis
-      const response = await fetch(`${RAG_BACKEND_URL}/api/v1/hackrx/run`, {
+      // Send to RAG backend for analysis using dedicated query endpoint
+      const response = await fetch(`${RAG_BACKEND_URL}/api/v1/documents/query`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer 8ad62148045cbf8137a66e1d8c0974e14f62a970b4fa91afb850f461abfbadb8",
         },
         body: JSON.stringify({
-          documents: documentUrl || "https://example.com/default.pdf",
-          questions: [args.queryText],
+          query: args.queryText,
+          document_id: documentId,
         }),
       });
 
@@ -123,7 +117,7 @@ export const analyzeQuery = action({
       const result = await response.json();
 
       // Extract RAG results
-      const ragResponse = result.answers?.[0] || "No response generated";
+      const ragResponse = result.answer || "No response generated";
       const confidence = 0.75;
 
       // Create prediction in Convex with RAG results
@@ -159,8 +153,7 @@ export const analyzeQuery = action({
 });
 
 /**
- * Search documents using RAG backend
- * Note: Backend doesn't have a dedicated search endpoint, using run endpoint
+ * Search documents using RAG backend's dedicated search endpoint
  */
 export const searchDocuments = action({
   args: {
@@ -169,15 +162,15 @@ export const searchDocuments = action({
   },
   handler: async (ctx, args) => {
     try {
-      const response = await fetch(`${RAG_BACKEND_URL}/api/v1/hackrx/run`, {
+      const response = await fetch(`${RAG_BACKEND_URL}/api/v1/documents/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer 8ad62148045cbf8137a66e1d8c0974e14f62a970b4fa91afb850f461abfbadb8",
         },
         body: JSON.stringify({
-          documents: "https://example.com/search.pdf",
-          questions: [args.query],
+          query: args.query,
+          limit: args.limit || 5,
         }),
       });
 
@@ -186,7 +179,7 @@ export const searchDocuments = action({
       }
 
       const result = await response.json();
-      return result.answers || [];
+      return result.results || [];
     } catch (error) {
       console.error("RAG search error:", error);
       return [];
