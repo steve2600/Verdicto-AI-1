@@ -162,7 +162,10 @@ async def ingest_document(
             "started_at": time.time()
         }
 
+        print(f"📥 Starting document ingestion for: {request.title}")
+        
         # Download document
+        print(f"⬇️ Downloading document from: {request.document_url}")
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(connect=5.0, read=30.0, write=5.0, pool=5.0),
             limits=httpx.Limits(max_connections=1, max_keepalive_connections=0)
@@ -173,14 +176,22 @@ async def ingest_document(
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
                 temp_pdf.write(pdf_response.content)
                 temp_pdf_path = temp_pdf.name
+        
+        print(f"✅ Document downloaded successfully to: {temp_pdf_path}")
 
         # Load and process document
+        print(f"📄 Loading PDF content...")
         docs = await load_pdf_ultra_fast(temp_pdf_path)
         if not docs:
             raise ValueError("No content extracted from PDF")
+        
+        print(f"✅ Extracted {len(docs)} document chunks")
 
         # Create QA chain (this ingests into Weaviate)
+        print(f"🔗 Creating QA chain and ingesting into Weaviate...")
         qa, cleanup_fn = await get_ultra_fast_qa_chain(docs)
+        
+        print(f"✅ Document ingested successfully into vector store")
         
         # Update status to completed
         document_store[request.document_id] = {
@@ -200,13 +211,37 @@ async def ingest_document(
             "message": "Document ingested successfully"
         }
 
-    except Exception as e:
+    except httpx.RequestError as e:
+        error_msg = f"Failed to download document: {str(e)}"
+        print(f"❌ Download error: {error_msg}")
         document_store[request.document_id] = {
             "status": "failed",
             "title": request.title,
-            "error": str(e)
+            "error": error_msg
         }
-        raise HTTPException(status_code=500, detail=f"Ingestion failed: {str(e)}")
+        raise HTTPException(status_code=400, detail=error_msg)
+    except ValueError as e:
+        error_msg = f"PDF processing error: {str(e)}"
+        print(f"❌ Processing error: {error_msg}")
+        document_store[request.document_id] = {
+            "status": "failed",
+            "title": request.title,
+            "error": error_msg
+        }
+        raise HTTPException(status_code=422, detail=error_msg)
+    except Exception as e:
+        error_msg = f"Ingestion failed: {str(e)}"
+        print(f"❌ Unexpected error: {error_msg}")
+        print(f"❌ Error type: {type(e).__name__}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        
+        document_store[request.document_id] = {
+            "status": "failed",
+            "title": request.title,
+            "error": error_msg
+        }
+        raise HTTPException(status_code=500, detail=error_msg)
     finally:
         if temp_pdf_path:
             cleanup_temp_files(temp_pdf_path)
