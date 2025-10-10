@@ -4,7 +4,7 @@ import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
 
-const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL || "https://verdicto-ai-production.up.railway.app";
+const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL || "https://verdicto-ai-1-production-3dbc.up.railway.app";
 
 /**
  * Send document to RAG backend for processing
