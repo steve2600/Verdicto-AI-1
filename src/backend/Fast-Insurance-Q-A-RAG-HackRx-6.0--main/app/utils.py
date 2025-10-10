@@ -12,6 +12,7 @@ import traceback
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
+from collections import defaultdict
 import httpx
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -171,7 +172,7 @@ async def get_embeddings(texts: List[str], model: str = "voyage-3-large") -> Lis
         )
         response.raise_for_status()
         data = response.json()
-        return [item["embedding"] for item in data["data"]]
+        return [item["embedding"] for item in data]
 
 
 def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
