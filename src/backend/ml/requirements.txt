@@ -9,7 +9,7 @@ sentence-transformers>=2.2.0
 # API Framework
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
-pydantic>=2.0.0
+pydantic>=2.5.0
 
 # Data Processing
 numpy>=1.24.0
@@ -24,4 +24,3 @@ requests>=2.31.0
 # Hackathon Features
 googletrans==4.0.0rc1
 langdetect>=1.0.9
-
