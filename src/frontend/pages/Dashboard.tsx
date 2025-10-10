@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
 import { useNavigate, Outlet } from "react-router";
-import { Loader2, Scale, Search, AlertTriangle, FileText, Menu, FileStack, History as HistoryIcon, FilePenLine } from "lucide-react";
+import { Loader2, Scale, Search, AlertTriangle, FileText, Menu, FileStack, History as HistoryIcon, FilePenLine, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -42,6 +42,7 @@ export default function Dashboard() {
     { id: "bias", label: "Bias Insights", icon: AlertTriangle, path: "/dashboard/bias" },
     { id: "reports", label: "Reports", icon: FileText, path: "/dashboard/reports" },
     { id: "history", label: "History", icon: HistoryIcon, path: "/dashboard/history" },
+    { id: "live-verdict", label: "Live Verdict", icon: Radio, path: "/dashboard/live-verdict" },
   ];
 
   const SidebarContent = () => (

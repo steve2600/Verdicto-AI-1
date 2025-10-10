@@ -4,9 +4,9 @@ import { InstrumentationProvider } from "@/instrumentation.tsx";
 import AuthPage from "@/pages/Auth.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
-import { StrictMode, useEffect } from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import { createBrowserRouter, RouterProvider } from "react-router";
 import "./index.css";
 import Landing from "./pages/Landing.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -18,33 +18,85 @@ import Reports from "./pages/Reports.tsx";
 import DocumentLibrary from "./pages/DocumentLibrary.tsx";
 import History from "./pages/History.tsx";
 import DocumentGenerator from "./pages/DocumentGenerator.tsx";
+import LiveVerdict from "./pages/LiveVerdict.tsx";
 import "./types/global.d.ts";
 import { ThemeProvider } from "./contexts/ThemeContext.tsx";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
-function RouteSyncer() {
-  const location = useLocation();
-  useEffect(() => {
-    window.parent.postMessage(
-      { type: "iframe-route-change", path: location.pathname },
-      "*",
-    );
-  }, [location.pathname]);
-
-  useEffect(() => {
-    function handleMessage(event: MessageEvent) {
-      if (event.data?.type === "navigate") {
-        if (event.data.direction === "back") window.history.back();
-        if (event.data.direction === "forward") window.history.forward();
-      }
-    }
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, []);
-
-  return null;
-}
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Landing />,
+  },
+  {
+    path: "/auth",
+    element: <AuthPage />,
+  },
+  {
+    path: "/dashboard",
+    element: <Dashboard />,
+    children: [
+      {
+        index: true,
+        element: <CasePrediction />,
+      },
+      {
+        path: "generator",
+        lazy: async () => {
+          const { default: DocumentGenerator } = await import("./pages/DocumentGenerator");
+          return { Component: DocumentGenerator };
+        },
+      },
+      {
+        path: "documents",
+        lazy: async () => {
+          const { default: DocumentLibrary } = await import("./pages/DocumentLibrary");
+          return { Component: DocumentLibrary };
+        },
+      },
+      {
+        path: "research",
+        lazy: async () => {
+          const { default: LegalResearch } = await import("./pages/LegalResearch");
+          return { Component: LegalResearch };
+        },
+      },
+      {
+        path: "bias",
+        lazy: async () => {
+          const { default: BiasInsights } = await import("./pages/BiasInsights");
+          return { Component: BiasInsights };
+        },
+      },
+      {
+        path: "reports",
+        lazy: async () => {
+          const { default: Reports } = await import("./pages/Reports");
+          return { Component: Reports };
+        },
+      },
+      {
+        path: "history",
+        lazy: async () => {
+          const { default: History } = await import("./pages/History");
+          return { Component: History };
+        },
+      },
+      {
+        path: "live-verdict",
+        lazy: async () => {
+          const { default: LiveVerdict } = await import("./pages/LiveVerdict");
+          return { Component: LiveVerdict };
+        },
+      },
+    ],
+  },
+  {
+    path: "*",
+    element: <NotFound />,
+  },
+]);
 
 function ConvexEnvGuard() {
   const url = import.meta.env.VITE_CONVEX_URL as string | undefined;
@@ -63,27 +115,11 @@ createRoot(document.getElementById("root")!).render(
     <VlyToolbar />
     <InstrumentationProvider>
       <ConvexAuthProvider client={convex}>
-        <BrowserRouter>
-          <ThemeProvider>
-            <ConvexEnvGuard />
-            <RouteSyncer />
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/auth" element={<AuthPage redirectAfterAuth="/dashboard" />} />
-              <Route path="/dashboard" element={<Dashboard />}>
-                <Route index element={<CasePrediction />} />
-                <Route path="documents" element={<DocumentLibrary />} />
-                <Route path="research" element={<LegalResearch />} />
-                <Route path="bias" element={<BiasInsights />} />
-                <Route path="reports" element={<Reports />} />
-                <Route path="history" element={<History />} />
-                <Route path="generator" element={<DocumentGenerator />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Toaster />
-          </ThemeProvider>
-        </BrowserRouter>
+        <ThemeProvider>
+          <ConvexEnvGuard />
+          <RouterProvider router={router} />
+          <Toaster />
+        </ThemeProvider>
       </ConvexAuthProvider>
     </InstrumentationProvider>
   </StrictMode>,
