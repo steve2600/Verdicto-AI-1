@@ -134,7 +134,7 @@ export default function DocumentLibrary() {
         })
         .catch((error) => {
           console.error("RAG processing error:", error);
-          toast.error("Document uploaded but processing failed");
+          toast.error("Document uploaded but processing failed - RAG backend not available");
         });
       
     } catch (error) {
