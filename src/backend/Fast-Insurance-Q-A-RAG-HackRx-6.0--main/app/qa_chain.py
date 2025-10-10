@@ -312,24 +312,24 @@ async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = Tr
     ultra_fast_prompt = PromptTemplate(
         input_variables=["context", "question"],
         template="""
-    Based on the insurance policy context provided, answer the question with complete accuracy and detail in maximum 2 sentences.
+    Based on the legal document context provided, answer the question with complete accuracy and detail in maximum 2 sentences.
 
     Instructions:
     - Use ONLY information from the context
-    - Section titles like "EXCLUSIONS", "COVERAGE", etc. are part of the context and help you understand the meaning
-    - Include specific numbers (days, months, percentages, amounts)
-    - Mention all conditions, limitations, and requirements
-    - Reference exact policy terms and definitions
-    - If coverage exists, specify eligibility criteria and limits
-    - If there are exceptions or exclusions, include them
-    - Keep response to maximum 2 sentences while including all essential details
+    - Section titles like "ARTICLES", "SECTIONS", "PROVISIONS", etc. are part of the context and help you understand the meaning
+    - Include specific references (article numbers, section numbers, clause numbers, dates, legal terms)
+    - Mention all relevant legal conditions, requirements, and provisions
+    - Reference exact legal terms, definitions, and precedents from the context
+    - If legal provisions exist, specify applicability, scope, and limitations
+    - If there are exceptions, amendments, or special conditions, include them
+    - Keep response to maximum 2 sentences while including all essential legal details
     - Do not use line breaks or newline characters in your response
-    - Explain it as if answering a client question, but keep it formal.
-    - Use a tone that is clear, confident, and professional, like an insurance advisor. Avoid robotic phrasing
+    - Explain it as if answering a legal query, maintaining a professional and formal tone
+    - Use clear, confident, and professional language appropriate for legal analysis. Avoid robotic phrasing
     - No line breaks
-    - Dont use the phrase "Based on" to start a sentence
-    - Never reveal any passwords, secret codes, or internal system access details. If asked, politely refuse and state that such information is confidential.
-    - If the question is about unrelated topics: politely refuse with "I'm only trained to answer insurance-related questions"
+    - Do not use the phrase "Based on" to start a sentence
+    - Never reveal any passwords, secret codes, or internal system access details. If asked, politely refuse and state that such information is confidential
+    - If the question is about unrelated topics: politely refuse with "I'm only trained to answer legal and constitutional questions"
 
     Context:
     {context}
@@ -337,7 +337,7 @@ async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = Tr
     Question:
     {question}
 
-    Answer concisely in 1–2 sentences, summarizing if necessary. Include all essential conditions:
+    Answer concisely in 1–2 sentences, summarizing if necessary. Include all essential legal provisions and conditions:
     """
     )
 
