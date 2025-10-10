@@ -35,6 +35,7 @@ export const processDocument = action({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": "Bearer 8ad62148045cbf8137a66e1d8c0974e14f62a970b4fa91afb850f461abfbadb8",
         },
         body: JSON.stringify({
           document_url: storageUrl, // Use the actual Convex storage URL

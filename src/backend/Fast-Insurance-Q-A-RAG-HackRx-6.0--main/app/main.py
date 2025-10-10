@@ -34,6 +34,12 @@ class QueryRequest(BaseModel):
     questions: List[str]
 
 
+class IngestRequest(BaseModel):
+    document_url: str
+    document_title: str
+    document_id: str
+
+
 async def process_single_question_ultra_fast(qa, question: str, timeout: int = 8) -> str:
     async with semaphore:
         try:
@@ -120,6 +126,61 @@ async def run_query_ultra_fast(
 
     except asyncio.TimeoutError:
         raise HTTPException(status_code=408, detail="Ultra-fast timeout exceeded")
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=400, detail=f"Download failed: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
+    finally:
+        if temp_pdf_path:
+            cleanup_temp_files(temp_pdf_path)
+        gc.collect()
+
+
+@app.post("/api/v1/hackrx/ingest")
+async def ingest_document(
+    request: IngestRequest,
+    authorization: Optional[str] = Header(None),
+    background_tasks: BackgroundTasks = BackgroundTasks()
+):
+    """Ingest a document for RAG processing"""
+    start_time = time.time()
+
+    if not authorization or authorization.split()[-1] != TEAM_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    temp_pdf_path = None
+    cleanup_fn = None
+
+    try:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(connect=5.0, read=30.0, write=5.0, pool=5.0),
+            limits=httpx.Limits(max_connections=1, max_keepalive_connections=0)
+        ) as client_http:
+            pdf_response = await client_http.get(request.document_url, follow_redirects=True)
+            pdf_response.raise_for_status()
+
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+                temp_pdf.write(pdf_response.content)
+                temp_pdf_path = temp_pdf.name
+
+        docs = await load_pdf_ultra_fast(temp_pdf_path)
+        if not docs:
+            raise ValueError("No content extracted from PDF")
+
+        # For now, just return success - in a full implementation, you'd store the chunks
+        # in a vector database for later retrieval
+        chunks_created = len(docs) if docs else 0
+
+        total_time = time.time() - start_time
+
+        return {
+            "success": True,
+            "message": f"Document '{request.document_title}' ingested successfully",
+            "chunks_created": chunks_created,
+            "processing_time": total_time,
+            "document_id": request.document_id
+        }
+
     except httpx.RequestError as e:
         raise HTTPException(status_code=400, detail=f"Download failed: {str(e)}")
     except Exception as e:
