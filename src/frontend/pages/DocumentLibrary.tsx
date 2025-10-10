@@ -30,11 +30,14 @@ import { toast } from "sonner";
 export default function DocumentLibrary() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedJurisdiction, setSelectedJurisdiction] = useState<string>("");
+  const [isUploading, setIsUploading] = useState(false);
   
   const documents = useQuery(api.documents.list, {
     jurisdiction: selectedJurisdiction || undefined,
   });
   const processDocumentWithRAG = useAction(api.rag.processDocument);
+  const generateUploadUrl = useMutation(api.documents.generateUploadUrl);
+  const createDocument = useMutation(api.documents.create);
 
   const filteredDocuments = documents?.filter((doc: any) =>
     searchTerm.length > 0
@@ -70,13 +73,82 @@ export default function DocumentLibrary() {
     );
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file");
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size must be less than 10MB");
+      return;
+    }
+
+    setIsUploading(true);
+    
+    try {
+      // Step 1: Generate upload URL
+      const uploadUrl = await generateUploadUrl();
+      
+      // Step 2: Upload file to Convex storage
+      const uploadResult = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      
+      if (!uploadResult.ok) {
+        throw new Error("Failed to upload file");
+      }
+      
+      const { storageId } = await uploadResult.json();
+      
+      // Step 3: Create document record
+      const documentId = await createDocument({
+        title: file.name,
+        jurisdiction: "India", // Default, can be made selectable
+        fileId: storageId,
+        metadata: {
+          documentType: "Legal Document",
+          version: "1.0",
+          fileSize: file.size,
+        },
+      });
+      
+      toast.success("Document uploaded successfully!");
+      
+      // Step 4: Process with RAG backend (in background)
+      const fileUrl = `${window.location.origin}/api/storage/${storageId}`;
+      processDocumentWithRAG({
+        documentId,
+        fileUrl,
+        title: file.name,
+      })
+        .then(() => {
+          toast.success("Document processed successfully!");
+        })
+        .catch((error) => {
+          console.error("RAG processing error:", error);
+          toast.error("Document uploaded but processing failed");
+        });
+      
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload document");
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      event.target.value = "";
+    }
+  };
+
   const handleUpload = () => {
-    toast.info("Document upload feature coming soon!");
-    // TODO: Implement file upload that calls processDocumentWithRAG
-    // Example flow:
-    // 1. Upload file to Convex storage
-    // 2. Create document record
-    // 3. Call processDocumentWithRAG with document ID and file URL
+    document.getElementById("file-upload-input")?.click();
   };
 
   return (
@@ -92,6 +164,15 @@ export default function DocumentLibrary() {
         </p>
       </motion.div>
 
+      {/* Hidden file input */}
+      <input
+        id="file-upload-input"
+        type="file"
+        accept="application/pdf"
+        onChange={handleFileUpload}
+        style={{ display: "none" }}
+      />
+
       {/* Upload Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -102,15 +183,23 @@ export default function DocumentLibrary() {
         <Card className="macos-card p-8 border-dashed border-2 hover:border-primary/50 macos-transition cursor-pointer">
           <div className="text-center" onClick={handleUpload}>
             <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4 neon-glow">
-              <Upload className="h-8 w-8 text-primary" />
+              {isUploading ? (
+                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+              ) : (
+                <Upload className="h-8 w-8 text-primary" />
+              )}
             </div>
-            <h3 className="text-lg font-bold mb-2">Upload Legal Documents</h3>
+            <h3 className="text-lg font-bold mb-2">
+              {isUploading ? "Uploading..." : "Upload Legal Documents"}
+            </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Drag and drop PDF files here, or click to browse
+              {isUploading 
+                ? "Processing your document..." 
+                : "Click to browse PDF files (max 10MB)"}
             </p>
-            <Button className="neon-glow">
+            <Button className="neon-glow" disabled={isUploading}>
               <Upload className="h-4 w-4 mr-2" />
-              Select Files
+              {isUploading ? "Uploading..." : "Select Files"}
             </Button>
           </div>
         </Card>
