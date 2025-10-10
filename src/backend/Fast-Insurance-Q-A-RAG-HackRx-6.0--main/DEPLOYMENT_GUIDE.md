@@ -53,8 +53,8 @@ Expected response:
 
 ### API Endpoints
 
-- `POST /api/v1/hackrx/ingest` - Document ingestion
-- `POST /api/v1/hackrx/run` - Query processing
+- `POST /api/v1/documents/ingest` - Document ingestion
+- `POST /api/v1/analysis/query` - Query processing
 - `GET /ping` - Health check
 - `GET /health` - Detailed health info
 
