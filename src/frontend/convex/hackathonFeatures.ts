@@ -1,8 +1,8 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
 
-// Unified ML API URL (contains both bias analysis and hackathon features)
-const ML_API_URL = process.env.ML_API_URL || "https://a-i-c-a-verdicto-ml.hf.space";
+// Unified ML API URL (now on port 8001, same as bias analysis)
+const ML_API_URL = process.env.ML_API_URL || "http://localhost:8001";
 
 // Translation action
 export const translateQuery = action({

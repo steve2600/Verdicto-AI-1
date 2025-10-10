@@ -2,10 +2,9 @@
 
 import { v } from "convex/values";
 import { action } from "./_generated/server";
-import { internal, api } from "./_generated/api";
+import { internal } from "./_generated/api";
 
-// RAG Backend on Railway for document processing
-const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL || "https://verdicto-ai-1-production.up.railway.app";
+const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL || "https://verdicto-ai-production.up.railway.app";
 
 /**
  * Send document to RAG backend for processing
@@ -13,7 +12,7 @@ const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL || "https://verdicto-ai-1-pr
 export const processDocument = action({
   args: {
     documentId: v.id("documents"),
-    fileUrl: v.string(), // Now expects storageId
+    fileUrl: v.string(),
     title: v.string(),
   },
   handler: async (ctx, args) => {
@@ -24,30 +23,21 @@ export const processDocument = action({
         status: "processing",
       });
 
-      // Get the actual file URL from Convex storage
-      const storageUrl = await ctx.storage.getUrl(args.fileUrl as any);
-      
-      if (!storageUrl) {
-        throw new Error("Failed to get storage URL for document");
-      }
-
-      // Send to RAG backend on Railway for document processing
-      const response = await fetch(`${RAG_BACKEND_URL}/api/v1/documents/ingest`, {
+      // Send to RAG backend for ingestion
+      const response = await fetch(`${RAG_BACKEND_URL}/api/v1/hackrx/ingest`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer 8ad62148045cbf8137a66e1d8c0974e14f62a970b4fa91afb850f461abfbadb8",
         },
         body: JSON.stringify({
-          document_url: storageUrl,
+          document_url: args.fileUrl,
           document_title: args.title,
           document_id: args.documentId,
         }),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`RAG backend error: ${response.statusText} - ${errorText}`);
+        throw new Error(`RAG backend error: ${response.statusText}`);
       }
 
       const result = await response.json();
@@ -93,8 +83,8 @@ export const analyzeQuery = action({
         status: "processing",
       });
 
-      // Use RAG backend on Railway for query analysis
-      const response = await fetch(`${RAG_BACKEND_URL}/api/v1/analysis/query`, {
+      // Send to RAG backend for analysis
+      const response = await fetch(`${RAG_BACKEND_URL}/api/v1/hackrx/run`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -106,37 +96,13 @@ export const analyzeQuery = action({
       });
 
       if (!response.ok) {
-        // Fallback to mock response if RAG backend is not available
-        console.warn("RAG backend not available, using mock response");
-        const ragResponse = `Based on the query "${args.queryText}", this appears to be a legal case analysis request. The system would typically provide detailed legal analysis, case predictions, and bias detection.`;
-        const sources: any[] = [];
-        const confidence = 0.75;
-        
-        // Create prediction with mock data
-        const predictionId: any = await ctx.runMutation(internal.predictions.createFromRAG, {
-          queryId: args.queryId,
-          ragResponse,
-          confidence,
-          sources,
-        });
-
-        // Update query status to completed
-        await ctx.runMutation(internal.queries.updateStatus, {
-          queryId: args.queryId,
-          status: "completed",
-        });
-
-        return {
-          success: true,
-          predictionId,
-          response: ragResponse,
-        };
+        throw new Error(`RAG backend error: ${response.statusText}`);
       }
 
       const result = await response.json();
 
-      // Extract RAG analysis results
-      const ragResponse = result.response || result.answer || "Legal analysis completed";
+      // Extract RAG results
+      const ragResponse = result.response || result.answer || "";
       const sources = result.sources || [];
       const confidence = result.confidence || 0.75;
 
@@ -185,25 +151,34 @@ export const analyzeQuery = action({
 });
 
 /**
- * Search documents using local Convex database
+ * Search documents using RAG backend
  */
 export const searchDocuments = action({
   args: {
     query: v.string(),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, args): Promise<any[]> => {
+  handler: async (ctx, args) => {
     try {
-      // Search documents in Convex database instead of external RAG backend
-      const documents: any[] = await ctx.runQuery(api.documents.search, {
-        searchTerm: args.query,
+      const response = await fetch(`${RAG_BACKEND_URL}/api/v1/hackrx/search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: args.query,
+          limit: args.limit || 10,
+        }),
       });
 
-      // Return limited results
-      const limit = args.limit || 10;
-      return documents.slice(0, limit);
+      if (!response.ok) {
+        throw new Error(`RAG backend error: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.results || [];
     } catch (error) {
-      console.error("Document search error:", error);
+      console.error("RAG search error:", error);
       return [];
     }
   },

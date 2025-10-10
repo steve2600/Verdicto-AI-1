@@ -1,52 +1,37 @@
-# Optimized Dockerfile for Hugging Face Spaces
+# Dockerfile for InLegalBERT Analysis API
+# =======================================
+
 FROM python:3.10-slim
 
+# Set working directory
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y \
     build-essential \
-    gcc \
+    curl \
     && rm -rf /var/lib/apt/lists/*
-
-# Create cache directories with proper permissions
-RUN mkdir -p /tmp/transformers_cache /tmp/huggingface /tmp/torch && \
-    chmod -R 777 /tmp/transformers_cache /tmp/huggingface /tmp/torch
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
-
-# Install dependencies in stages for better caching
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir \
-    fastapi==0.104.0 \
-    uvicorn[standard]==0.24.0 \
-    pydantic==2.5.0 \
-    python-multipart==0.0.6 \
-    python-dotenv==1.0.0 \
-    requests==2.31.0 \
-    googletrans==4.0.0rc1 \
-    langdetect==1.0.9 && \
-    pip install --no-cache-dir \
-    numpy==1.24.0 \
-    pandas==2.0.0 \
-    scikit-learn==1.3.0 && \
-    pip install --no-cache-dir \
-    torch==2.0.0 \
-    transformers==4.35.0 \
-    sentence-transformers==2.2.0
+    pip install --no-cache-dir -r requirements.txt
+
+# Pre-download InLegalBERT model to reduce startup time
+RUN python -c "from transformers import AutoTokenizer, AutoModel; \
+    AutoTokenizer.from_pretrained('law-ai/InLegalBERT'); \
+    AutoModel.from_pretrained('law-ai/InLegalBERT')"
 
 # Copy application code
 COPY . .
 
-# Expose port (Hugging Face Spaces uses 7860 by default)
-EXPOSE 7860
+# Expose API port
+EXPOSE 8001
 
-# Set environment variables for cache directories
-ENV PORT=7860
-ENV TRANSFORMERS_CACHE=/tmp/transformers_cache
-ENV HF_HOME=/tmp/huggingface
-ENV TORCH_HOME=/tmp/torch
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8001/ || exit 1
 
-# Start the application
-CMD ["python", "app.py"]
+# Run the application
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "2"]
+

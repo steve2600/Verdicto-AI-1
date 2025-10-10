@@ -1,18 +1,18 @@
 services:
   - type: web
-    name: verdicto-rag-backend
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    name: hackrx-backend
+    runtime: python
+    buildCommand: |
+      apt-get update && apt-get install -y build-essential wget
+      wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
+      tar -xzvf ta-lib-0.4.0-src.tar.gz
+      cd ta-lib
+      ./configure --prefix=/usr
+      make
+      make install
+      cd ..
+      pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
     envVars:
       - key: PORT
         value: 10000
-      - key: VOYAGE_API_KEY
-        sync: false
-      - key: GROQ_API_KEY
-        sync: false
-      - key: WEAVIATE_URL
-        sync: false
-      - key: WEAVIATE_API_KEY
-        sync: false
-    healthCheckPath: /ping

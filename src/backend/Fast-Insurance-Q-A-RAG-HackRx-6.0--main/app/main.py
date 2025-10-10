@@ -30,14 +30,8 @@ semaphore = asyncio.Semaphore(SEM_LIMIT)
 
 
 class QueryRequest(BaseModel):
-    query: str
-    document_ids: List[str] = []
-
-
-class IngestRequest(BaseModel):
-    document_url: str
-    document_title: str
-    document_id: str
+    documents: str
+    questions: List[str]
 
 
 async def process_single_question_ultra_fast(qa, question: str, timeout: int = 8) -> str:
@@ -51,7 +45,7 @@ async def process_single_question_ultra_fast(qa, question: str, timeout: int = 8
             return f"Error: {str(e)}"
 
 
-@app.post("/api/v1/analysis/query")
+@app.post("/api/v1/hackrx/run")
 async def run_query_ultra_fast(
     request: QueryRequest,
     authorization: Optional[str] = Header(None),
@@ -66,54 +60,11 @@ async def run_query_ultra_fast(
     cleanup_fn = None
 
     try:
-        # For now, return a mock response since we don't have document processing
-        # In a full implementation, you would process the query with RAG
-        
-        total_time = time.time() - start_time
-        
-        # Mock response for Verdicto
-        response_text = f"Based on the query '{request.query}', this appears to be a legal case analysis request. The system would provide detailed legal analysis, case predictions, and bias detection."
-        
-        return {
-            "response": response_text,
-            "confidence": 0.75,
-            "sources": [],
-            "processing_time": total_time
-        }
-
-    except asyncio.TimeoutError:
-        raise HTTPException(status_code=408, detail="Ultra-fast timeout exceeded")
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=400, detail=f"Download failed: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
-    finally:
-        if temp_pdf_path:
-            cleanup_temp_files(temp_pdf_path)
-        gc.collect()
-
-
-@app.post("/api/v1/documents/ingest")
-async def ingest_document(
-    request: IngestRequest,
-    authorization: Optional[str] = Header(None),
-    background_tasks: BackgroundTasks = BackgroundTasks()
-):
-    """Ingest a document for RAG processing"""
-    start_time = time.time()
-
-    if not authorization or authorization.split()[-1] != TEAM_TOKEN:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
-    temp_pdf_path = None
-    cleanup_fn = None
-
-    try:
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(connect=5.0, read=30.0, write=5.0, pool=5.0),
             limits=httpx.Limits(max_connections=1, max_keepalive_connections=0)
         ) as client_http:
-            pdf_response = await client_http.get(request.document_url, follow_redirects=True)
+            pdf_response = await client_http.get(request.documents, follow_redirects=True)
             pdf_response.raise_for_status()
 
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
@@ -124,20 +75,51 @@ async def ingest_document(
         if not docs:
             raise ValueError("No content extracted from PDF")
 
-        # For now, just return success - in a full implementation, you'd store the chunks
-        # in a vector database for later retrieval
-        chunks_created = len(docs) if docs else 0
+        qa, cleanup_fn = await get_ultra_fast_qa_chain(docs)
+
+        max_concurrent = min(len(request.questions), 12)
+        per_question_timeout = max(6, min(10, 80 // len(request.questions)))
+
+        if len(request.questions) <= max_concurrent:
+            tasks = [
+                process_single_question_ultra_fast(qa, q, per_question_timeout)
+                for q in request.questions
+            ]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+        else:
+            results = []
+            for i in range(0, len(request.questions), max_concurrent):
+                batch = request.questions[i:i + max_concurrent]
+                tasks = [
+                    process_single_question_ultra_fast(qa, q, per_question_timeout)
+                    for q in batch
+                ]
+                batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+                results.extend(batch_results)
+
+        answers = [
+            f"Error: {str(r)}" if isinstance(r, Exception) else str(r)
+            for r in results
+        ]
 
         total_time = time.time() - start_time
 
+        if cleanup_fn:
+            background_tasks.add_task(cleanup_fn)
+
+        # Group all questions and answers into separate dicts
+        questions_dict = {f"q{i + 1}": q for i, q in enumerate(request.questions)}
+        answers_dict = {f"a{i + 1}": a for i, a in enumerate(answers)}
+
+        print("Questions:", questions_dict)
+        print("Answers:", answers_dict)
+
         return {
-            "success": True,
-            "message": f"Document '{request.document_title}' ingested successfully",
-            "chunks_created": chunks_created if chunks_created > 0 else 5,  # Mock chunks if none created
-            "processing_time": total_time,
-            "document_id": request.document_id
+            "answers": answers
         }
 
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=408, detail="Ultra-fast timeout exceeded")
     except httpx.RequestError as e:
         raise HTTPException(status_code=400, detail=f"Download failed: {str(e)}")
     except Exception as e:
