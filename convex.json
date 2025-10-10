@@ -1,6 +1,4 @@
 {
-  "node": {
-    "version": "18"
-  },
+  "$schema": "https://raw.githubusercontent.com/get-convex/convex-backend/refs/heads/main/npm-packages/convex/schemas/convex.schema.json",
   "functions": "src/frontend/convex/"
 }

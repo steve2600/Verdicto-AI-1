@@ -15,7 +15,7 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 
 // Unified ML API URL (now on port 8001)
-const ML_API_URL = process.env.ML_API_URL || "https://a-i-c-a-verdicto-ml.hf.space";
+const ML_API_URL = process.env.ML_API_URL || "http://localhost:8001";
 
 export const analyzeCaseWithML = action({
   args: {
