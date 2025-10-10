@@ -35,6 +35,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY app/ ./app/
 
-EXPOSE 10000
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "10000"]
+# Railway dynamically assigns the PORT environment variable
+# We'll use a shell script to handle this
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}
