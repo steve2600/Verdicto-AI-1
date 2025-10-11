@@ -49,6 +49,7 @@ export default function CasePrediction() {
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
   const [interimTranscript, setInterimTranscript] = useState("");
+  const [selectedDocuments, setSelectedDocuments] = useState<Id<"documents">[]>([]);
   
   // Multilingual features
   const [selectedLanguage, setSelectedLanguage] = useState("en");
@@ -74,6 +75,7 @@ export default function CasePrediction() {
     prediction ? { predictionId: prediction._id } : "skip"
   );
   const cases = useQuery(api.cases.list, {});
+  const documents = useQuery(api.documents.list, {});
 
   // Hackathon feature actions
   const translateQuery = useAction(api.hackathonFeatures.translateQuery);
@@ -120,14 +122,17 @@ export default function CasePrediction() {
         }
       }
       
-      const queryId = await createQuery({ queryText: processedQuery });
+      const queryId = await createQuery({ 
+        queryText: processedQuery,
+        uploadedFiles: undefined
+      });
       setCurrentQueryId(queryId);
       
-      // Send to RAG backend for analysis
+      // Send to RAG backend for analysis with selected documents
       await analyzeWithRAG({ 
         queryId, 
         queryText: processedQuery,
-        documentIds: undefined 
+        documentIds: selectedDocuments.length > 0 ? selectedDocuments : undefined
       });
       
       toast.success("Analysis complete!");
@@ -276,7 +281,34 @@ export default function CasePrediction() {
         transition={{ delay: 0.1 }}
       >
         <Card className="macos-card p-6 mb-6 neon-glow">
-          <div className="space-y-4">
+            <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Select Documents (Optional)</label>
+              <Select 
+                value={selectedDocuments.length > 0 ? selectedDocuments[0] : "none"} 
+                onValueChange={(val) => {
+                  if (val === "none") {
+                    setSelectedDocuments([]);
+                  } else {
+                    setSelectedDocuments([val as Id<"documents">]);
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full macos-vibrancy">
+                  <FileText className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Search all documents or select specific ones" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Search all documents</SelectItem>
+                  {documents?.filter(doc => doc.status === "processed").map((doc) => (
+                    <SelectItem key={doc._id} value={doc._id}>
+                      {doc.title} ({doc.jurisdiction})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <label className="text-sm font-medium mb-2 block">Language</label>
               <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
