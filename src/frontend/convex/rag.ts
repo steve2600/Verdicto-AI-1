@@ -118,7 +118,32 @@ export const analyzeQuery = action({
 
       // Extract RAG results
       const ragResponse = result.answer || "No response generated";
-      const confidence = 0.75;
+      
+      // Calculate dynamic confidence based on response quality
+      // Factors: response length, presence of specific legal terms, structure
+      let confidence = 0.5; // Base confidence
+      
+      if (ragResponse && ragResponse.length > 100) {
+        confidence += 0.1; // Longer, more detailed responses
+      }
+      if (ragResponse && ragResponse.length > 300) {
+        confidence += 0.1; // Very detailed responses
+      }
+      
+      // Check for legal terminology and structure
+      const legalTerms = ['section', 'act', 'court', 'case', 'law', 'legal', 'pursuant', 'hereby', 'whereas'];
+      const termsFound = legalTerms.filter(term => 
+        ragResponse.toLowerCase().includes(term)
+      ).length;
+      
+      if (termsFound >= 3) {
+        confidence += 0.15; // Contains multiple legal terms
+      } else if (termsFound >= 1) {
+        confidence += 0.05; // Contains some legal terms
+      }
+      
+      // Cap confidence at 0.95 (never 100% certain)
+      confidence = Math.min(confidence, 0.95);
 
       // Create prediction in Convex with RAG results
       const predictionId: any = await ctx.runMutation(internal.predictions.createFromRAG, {
