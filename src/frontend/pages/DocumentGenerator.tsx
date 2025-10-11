@@ -46,8 +46,10 @@ export default function DocumentGenerator() {
       });
       
       if (result.success) {
-        setGeneratedDoc(result.document.content);
+        setGeneratedDoc(result.content);
         toast.success("Document generated successfully!");
+      } else {
+        toast.error("Failed to generate document");
       }
     } catch (error) {
       toast.error("Generation failed. Make sure the backend is running.");
@@ -390,4 +392,3 @@ export default function DocumentGenerator() {
     </div>
   );
 }
-
