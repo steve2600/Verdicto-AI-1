@@ -218,9 +218,16 @@ export default function CasePrediction() {
         readingLevel: userMode === "citizen" ? "simple" : "intermediate"
       });
       
-      if (result.success) {
-        setSimplifiedText(result.simplification);
+      if (result.success && result.simplification) {
+        // Extract the simplified_text from the nested response structure
+        const simplifiedText = typeof result.simplification === 'string' 
+          ? result.simplification 
+          : result.simplification.simplified_text || result.simplification;
+        
+        setSimplifiedText(simplifiedText);
         toast.success("Text simplified!");
+      } else {
+        toast.error("No simplified text received");
       }
     } catch (error) {
       toast.error("Simplification failed");
