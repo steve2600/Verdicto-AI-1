@@ -73,68 +73,88 @@ export default function DocumentLibrary() {
   };
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    // Validate file type
-    if (file.type !== "application/pdf") {
-      toast.error("Only PDF files are supported");
+    const fileArray = Array.from(files);
+    
+    // Validate all files first
+    const invalidFiles = fileArray.filter(
+      file => file.type !== "application/pdf" || file.size > 10 * 1024 * 1024
+    );
+
+    if (invalidFiles.length > 0) {
+      toast.error(`${invalidFiles.length} file(s) rejected: Only PDF files under 10MB are supported`);
       return;
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("File size must be less than 10MB");
-      return;
-    }
+    toast.info(`Uploading ${fileArray.length} document(s)...`);
 
-    try {
-      toast.info("Uploading document...");
+    let successCount = 0;
+    let failCount = 0;
 
-      // Step 1: Get upload URL from Convex
-      const uploadUrl = await generateUploadUrl();
+    // Process all files in parallel
+    const uploadPromises = fileArray.map(async (file) => {
+      try {
+        // Step 1: Get upload URL from Convex
+        const uploadUrl = await generateUploadUrl();
 
-      // Step 2: Upload file to Convex storage
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
+        // Step 2: Upload file to Convex storage
+        const uploadResponse = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
 
-      if (!uploadResponse.ok) {
-        throw new Error("Failed to upload file");
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload file");
+        }
+
+        const { storageId } = await uploadResponse.json();
+
+        // Step 3: Create document record
+        const documentId = await createDocument({
+          title: file.name.replace(".pdf", ""),
+          jurisdiction: "General",
+          fileId: storageId,
+          metadata: {
+            documentType: "Legal Document",
+            version: "1.0",
+            fileSize: file.size,
+          },
+        });
+
+        // Step 4: Process document with RAG backend (async, don't wait)
+        processDocumentWithRAG({
+          documentId,
+          fileUrl: storageId,
+          title: file.name.replace(".pdf", ""),
+        }).catch(err => {
+          console.error(`RAG processing failed for ${file.name}:`, err);
+        });
+
+        successCount++;
+        return { success: true, fileName: file.name };
+      } catch (error) {
+        console.error(`Upload error for ${file.name}:`, error);
+        failCount++;
+        return { success: false, fileName: file.name, error };
       }
+    });
 
-      const { storageId } = await uploadResponse.json();
+    await Promise.all(uploadPromises);
 
-      // Step 3: Create document record
-      const documentId = await createDocument({
-        title: file.name.replace(".pdf", ""),
-        jurisdiction: "General",
-        fileId: storageId,
-        metadata: {
-          documentType: "Legal Document",
-          version: "1.0",
-          fileSize: file.size,
-        },
-      });
-
-      toast.success("Document uploaded successfully!");
-
-      // Step 4: Process document with RAG backend
-      toast.info("Processing document with AI...");
-      
-      await processDocumentWithRAG({
-        documentId,
-        fileUrl: storageId,
-        title: file.name.replace(".pdf", ""),
-      });
-
-      toast.success("Document processed and ready for analysis!");
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error(`Upload failed: ${error}`);
+    // Show summary toast
+    if (successCount > 0 && failCount === 0) {
+      toast.success(`All ${successCount} document(s) uploaded successfully! Processing with AI...`);
+    } else if (successCount > 0 && failCount > 0) {
+      toast.warning(`${successCount} document(s) uploaded, ${failCount} failed`);
+    } else {
+      toast.error(`All ${failCount} document(s) failed to upload`);
     }
+
+    // Reset file input
+    event.target.value = "";
   };
 
   return (
@@ -164,7 +184,7 @@ export default function DocumentLibrary() {
             </div>
             <h3 className="text-lg font-bold mb-2">Upload Legal Documents</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Drag and drop PDF files here, or click to browse (Max 10MB)
+              Drag and drop PDF files here, or click to browse (Max 10MB each, multiple files supported)
             </p>
             <label htmlFor="file-upload" className="cursor-pointer inline-block">
               <Button type="button" className="neon-glow pointer-events-none">
@@ -178,6 +198,7 @@ export default function DocumentLibrary() {
               accept="application/pdf"
               onChange={handleUpload}
               className="hidden"
+              multiple
             />
           </div>
         </Card>
