@@ -1,34 +1,83 @@
-# Verdicto
+# LexAI UI - AI-Powered Legal Assistant
 
 **Justice, Accelerated by AI**
 
-Verdicto is a futuristic, ultra-modern AI-powered legal assistant designed to accelerate justice through transparent, accessible, and unbiased analysis. The application provides AI-driven case predictions, bias detection, legal research capabilities, document management, and comprehensive analysis reports.
+LexAI UI is a futuristic, ultra-modern AI-powered legal assistant designed to accelerate justice through transparent, accessible, and unbiased analysis. Built with cutting-edge technologies, it provides AI-driven case predictions, bias detection, legal research capabilities, document management, and comprehensive analysis reports.
 
-## Overview
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Version](https://img.shields.io/badge/version-2.0.0-green.svg)
 
-Verdicto leverages Retrieval-Augmented Generation (RAG) to provide intelligent legal analysis with explainable AI reasoning. The platform features an elegant, minimalist design with a consistent black, white, and silver color scheme, using the Inter font family throughout for a sophisticated, professional aesthetic.
+---
 
-## Key Features
+## 🌟 Key Features
 
-- **AI Case Predictions**: Forecast legal outcomes based on historical data and precedents with confidence scores
-- **Bias Detection**: Identify and flag potential biases in AI analysis and legal reasoning
-- **Legal Research**: Access a searchable database of legal cases and precedents
-- **Document Management**: Upload, organize, and track legal documents for RAG analysis
-- **Explainable AI**: Transparent reasoning with supporting evidence snippets for each prediction
-- **Analysis Reports**: Generate and download comprehensive analysis summaries
-- **Query History**: Track and review past queries and their outcomes
-- **Citizen & Lawyer Modes**: Toggle between simplified and professional analysis views
+### Core Capabilities
+- **AI Case Predictions** - Forecast legal outcomes based on historical data and precedents with dynamic confidence scores
+- **Bias Detection** - Identify and flag potential biases in AI analysis and legal reasoning using InLegalBERT
+- **Legal Research** - Access a searchable database of legal cases and precedents
+- **Document Management** - Upload, organize, and track legal documents with batch ingestion support
+- **Explainable AI** - Transparent reasoning with supporting evidence snippets for each prediction
+- **Live Verdict** - Real-time transcription of court proceedings with AI-powered verdict analysis
+- **Analysis Reports** - Generate and download comprehensive analysis summaries
+- **Query History** - Track and review past queries and their outcomes
 
-## Tech Stack
+### Advanced Features
+- **Citizen & Lawyer Modes** - Toggle between simplified and professional analysis views
+- **Multilingual Support** - Query translation for 9 Indian languages
+- **Document Generation** - Generate legal documents (bail applications, FIRs, petitions, affidavits)
+- **What-if Simulation** - Simulate case outcomes based on modifications
+- **Systemic Bias Analysis** - Analyze historical patterns across gender, region, caste, and temporal trends
+- **Guest Sign-In** - Anonymous access to explore the application
 
-- **Frontend**: Vite, TypeScript, React 19, React Router v7
-- **Styling**: Tailwind v4, Shadcn UI, Lucide Icons
-- **Animations**: Framer Motion
-- **Backend & Database**: Convex
-- **Authentication**: Convex Auth (Email OTP)
-- **3D Graphics**: Three.js
+---
 
-## Project Structure
+## 🛠️ Tech Stack
+
+### Frontend
+- **Framework**: React 19 with TypeScript
+- **Build Tool**: Vite 6.3.5
+- **Routing**: React Router v7
+- **Styling**: Tailwind CSS v4
+- **UI Components**: Shadcn UI (Radix UI primitives)
+- **Animations**: Framer Motion 12.15.0
+- **3D Graphics**: Three.js with React Three Fiber
+- **Icons**: Lucide React
+- **State Management**: Convex React hooks
+- **Forms**: React Hook Form with Zod validation
+- **Charts**: Recharts
+- **Notifications**: Sonner (toast notifications)
+
+### Backend & Database
+- **Backend**: Convex (serverless backend)
+- **Database**: Convex (real-time database)
+- **Authentication**: Convex Auth with Email OTP
+- **File Storage**: Convex Storage
+
+### AI & ML Backend
+- **RAG Backend**: FastAPI (Python)
+  - **LLM**: Llama 3.1 8B Instant (via Groq)
+  - **Embeddings**: Voyage AI (voyage-3-large)
+  - **Vector Database**: Weaviate
+  - **PDF Processing**: PyMuPDF, pypdf
+  - **Deployment**: Railway
+
+- **ML Backend**: FastAPI (Python)
+  - **Bias Detection Model**: InLegalBERT (law-ai/InLegalBERT)
+  - **Framework**: PyTorch, HuggingFace Transformers
+  - **Translation**: Google Translate API
+  - **Document Generation**: Template-based with AI enhancement
+  - **Deployment**: Hugging Face Spaces
+
+### Development Tools
+- **Language**: TypeScript 5.8.3
+- **Package Manager**: pnpm
+- **Linting**: ESLint 9.25.0
+- **Formatting**: Prettier 3.5.3
+- **Type Checking**: TypeScript compiler
+
+---
+
+## 📁 Project Structure
 
 All relevant files live in the 'src/frontend' directory.
 
