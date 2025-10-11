@@ -113,12 +113,20 @@ export default function CasePrediction() {
             sourceLang: selectedLanguage,
             targetLang: "en"
           });
-          if (translationResult.success) {
-            processedQuery = translationResult.translation;
+          
+          console.log("Translation result:", translationResult);
+          
+          // Backend returns: { status: "success", translation: { translated_text: "..." } }
+          if (translationResult.status === "success" && translationResult.translation?.translated_text) {
+            processedQuery = translationResult.translation.translated_text;
             toast.success(`Translated from ${selectedLanguage} to English`);
+          } else {
+            console.warn("Translation response missing translated_text:", translationResult);
+            toast.warning("Translation unavailable, using original text");
           }
         } catch (error) {
           console.warn("Translation failed, using original text:", error);
+          toast.warning("Translation failed, using original text");
         }
       }
       
