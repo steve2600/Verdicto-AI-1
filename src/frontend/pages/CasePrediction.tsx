@@ -59,6 +59,11 @@ export default function CasePrediction() {
   const [simplifiedText, setSimplifiedText] = useState("");
   const [isSimplifying, setIsSimplifying] = useState(false);
   
+  // Translation features
+  const [translatedPrediction, setTranslatedPrediction] = useState("");
+  const [translatedReasoning, setTranslatedReasoning] = useState("");
+  const [isTranslatingResponse, setIsTranslatingResponse] = useState(false);
+  
   // Simulation features
   const [showSimulation, setShowSimulation] = useState(false);
   const [simulationResult, setSimulationResult] = useState<any>(null);
@@ -94,6 +99,52 @@ export default function CasePrediction() {
     };
     loadLanguages();
   }, [getSupportedLanguages]);
+
+  // Auto-translate prediction results when language changes
+  useEffect(() => {
+    // Only translate if we have a prediction and non-English language is selected
+    if (!prediction || selectedLanguage === "en" || !prediction.prediction) {
+      setTranslatedPrediction("");
+      setTranslatedReasoning("");
+      return;
+    }
+
+    const translateResults = async () => {
+      setIsTranslatingResponse(true);
+      try {
+        // Translate prediction
+        const predictionResult = await translateResponse({
+          text: prediction.prediction,
+          targetLang: selectedLanguage
+        });
+
+        if (predictionResult.status === "success" && predictionResult.translation?.translated_text) {
+          setTranslatedPrediction(predictionResult.translation.translated_text);
+        }
+
+        // Translate reasoning if it exists
+        if (prediction.reasoning) {
+          const reasoningResult = await translateResponse({
+            text: prediction.reasoning,
+            targetLang: selectedLanguage
+          });
+
+          if (reasoningResult.status === "success" && reasoningResult.translation?.translated_text) {
+            setTranslatedReasoning(reasoningResult.translation.translated_text);
+          }
+        }
+
+        toast.success(`Results translated to ${selectedLanguage}`);
+      } catch (error) {
+        console.error("Translation error:", error);
+        toast.error("Failed to translate results");
+      } finally {
+        setIsTranslatingResponse(false);
+      }
+    };
+
+    translateResults();
+  }, [prediction, selectedLanguage, translateResponse]);
 
   const handleSubmit = async () => {
     if (!queryText.trim()) {
@@ -468,7 +519,18 @@ export default function CasePrediction() {
                       score={prediction.confidenceScore}
                     />
                   </div>
-                  <p className="text-muted-foreground">{prediction.prediction}</p>
+                  {isTranslatingResponse && selectedLanguage !== "en" ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Translating...</span>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">
+                      {selectedLanguage !== "en" && translatedPrediction 
+                        ? translatedPrediction 
+                        : prediction.prediction}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -568,9 +630,18 @@ export default function CasePrediction() {
                     <div className="space-y-4 pr-4">
                       <div className="macos-vibrancy p-4 rounded-lg">
                         <h4 className="font-medium mb-2">Analysis Method</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {prediction.reasoning}
-                        </p>
+                        {isTranslatingResponse && selectedLanguage !== "en" ? (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Translating reasoning...</span>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            {selectedLanguage !== "en" && translatedReasoning 
+                              ? translatedReasoning 
+                              : prediction.reasoning}
+                          </p>
+                        )}
                       </div>
 
                       {biasReport && (
