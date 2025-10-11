@@ -312,7 +312,7 @@ async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = Tr
     ultra_fast_prompt = PromptTemplate(
         input_variables=["context", "question"],
         template="""
-    Based on the legal document context provided, answer the question with complete accuracy and detail in maximum 2 sentences.
+    Based on the legal document context provided, answer the question with complete accuracy and detail in 3-4 sentences.
 
     Instructions:
     - Use ONLY information from the context
@@ -322,7 +322,7 @@ async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = Tr
     - Reference exact legal terms, definitions, and precedents from the context
     - If legal provisions exist, specify applicability, scope, and limitations
     - If there are exceptions, amendments, or special conditions, include them
-    - Keep response to maximum 2 sentences while including all essential legal details
+    - Keep response to 3-4 sentences while including all essential legal details
     - Do not use line breaks or newline characters in your response
     - Explain it as if answering a legal query, maintaining a professional and formal tone
     - Use clear, confident, and professional language appropriate for legal analysis. Avoid robotic phrasing
@@ -337,7 +337,7 @@ async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = Tr
     Question:
     {question}
 
-    Answer concisely in 1–2 sentences, summarizing if necessary. Include all essential legal provisions and conditions:
+    Answer in 3-4 sentences, providing comprehensive legal analysis. Include all essential legal provisions and conditions:
     """
     )
 
