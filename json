@@ -1,8 +1,6 @@
 {
   "status": "success",
-  "simplification": {
-    "simplified_text": "...",
-    "original_text": "...",
-    ...
+  "translation": {
+    "translated_text": "i want justice"
   }
 }
