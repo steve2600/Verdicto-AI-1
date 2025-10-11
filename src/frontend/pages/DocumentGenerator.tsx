@@ -45,8 +45,8 @@ export default function DocumentGenerator() {
         details: formData
       });
       
-      if (result.success) {
-        setGeneratedDoc(result.content);
+      if (result.status === "success" && result.document) {
+        setGeneratedDoc(result.document.content);
         toast.success("Document generated successfully!");
       } else {
         toast.error("Failed to generate document");
