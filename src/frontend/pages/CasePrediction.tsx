@@ -218,20 +218,26 @@ export default function CasePrediction() {
         readingLevel: userMode === "citizen" ? "simple" : "intermediate"
       });
       
-      if (result.success && result.simplification) {
-        // Extract the simplified_text from the nested response structure
-        const simplifiedText = typeof result.simplification === 'string' 
-          ? result.simplification 
-          : result.simplification.simplified_text || result.simplification;
+      console.log("Simplification result:", result);
+      
+      if (result.status === "success" && result.simplification) {
+        // The backend returns: { status: "success", simplification: { simplified_text: "...", ... } }
+        const simplifiedText = result.simplification.simplified_text;
         
-        setSimplifiedText(simplifiedText);
-        toast.success("Text simplified!");
+        if (simplifiedText) {
+          setSimplifiedText(simplifiedText);
+          toast.success("Text simplified!");
+        } else {
+          toast.error("No simplified text in response");
+          console.error("Missing simplified_text in:", result.simplification);
+        }
       } else {
-        toast.error("No simplified text received");
+        toast.error("Simplification request failed");
+        console.error("Unexpected result structure:", result);
       }
     } catch (error) {
       toast.error("Simplification failed");
-      console.error(error);
+      console.error("Simplification error:", error);
     } finally {
       setIsSimplifying(false);
     }
