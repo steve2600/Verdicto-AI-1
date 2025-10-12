@@ -425,6 +425,21 @@ export default function CasePrediction() {
                 variant="outline"
                 className="macos-vibrancy"
                 disabled={isAnalyzing}
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.pdf,.doc,.docx';
+                  input.multiple = true;
+                  input.onchange = (e: any) => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length > 0) {
+                      toast.success(`${files.length} file(s) selected`);
+                      // TODO: Implement file upload to Convex storage
+                      toast.info("File upload to be implemented");
+                    }
+                  };
+                  input.click();
+                }}
               >
                 <Upload className="h-4 w-4 mr-2" />
                 Upload Documents
