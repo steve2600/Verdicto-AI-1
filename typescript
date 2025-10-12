@@ -1,5 +1,1 @@
-// Only passes documentIds if at least one is selected
-documentIds: selectedDocuments.length > 0 ? selectedDocuments : undefined
-
-// UI only allows single selection
-setSelectedDocuments([val as Id<"documents">]);
+setTranscript((prev) => prev + finalTranscript + interimTranscript);

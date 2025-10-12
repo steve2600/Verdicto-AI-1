@@ -15,6 +15,7 @@ export default function LiveVerdict() {
   const [recognition, setRecognition] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [verdictAnalysis, setVerdictAnalysis] = useState<any>(null);
+  const [interimTranscript, setInterimTranscript] = useState("");
 
   const analyzeWithRAG = useAction(api.rag.analyzeQuery);
   const createQuery = useMutation(api.queries.create);
@@ -40,7 +41,13 @@ export default function LiveVerdict() {
           }
         }
 
-        setTranscript((prev) => prev + finalTranscript + interimTranscript);
+        // Only append final transcript to permanent transcript
+        if (finalTranscript) {
+          setTranscript((prev) => prev + finalTranscript);
+        }
+        
+        // Update interim transcript separately for live display
+        setInterimTranscript(interimTranscript);
       };
 
       recognitionInstance.onerror = (event: any) => {
@@ -213,9 +220,12 @@ export default function LiveVerdict() {
           )}
 
           <div className="min-h-[400px] max-h-[600px] overflow-y-auto p-4 rounded-lg bg-muted/50 border border-border">
-            {transcript ? (
+            {transcript || interimTranscript ? (
               <p className="text-foreground whitespace-pre-wrap leading-relaxed">
                 {transcript}
+                {interimTranscript && (
+                  <span className="text-muted-foreground italic">{interimTranscript}</span>
+                )}
               </p>
             ) : (
               <p className="text-muted-foreground text-center">
