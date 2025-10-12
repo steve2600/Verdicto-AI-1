@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FileText, Download, Loader2, Copy, CheckCircle2 } from "lucide-react";
+import { FileText, Download, Loader2, Copy, CheckCircle2, FileDown } from "lucide-react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
@@ -77,6 +77,43 @@ export default function DocumentGenerator() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast.success("Document downloaded!");
+  };
+
+  const handleDownloadPDF = () => {
+    // Create a simple PDF using browser print
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>${documentType}_${Date.now()}</title>
+            <style>
+              body { 
+                font-family: 'Times New Roman', serif; 
+                padding: 40px; 
+                line-height: 1.6;
+                max-width: 800px;
+                margin: 0 auto;
+              }
+              pre { 
+                white-space: pre-wrap; 
+                word-wrap: break-word;
+                font-family: 'Times New Roman', serif;
+              }
+            </style>
+          </head>
+          <body>
+            <pre>${generatedDoc}</pre>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        toast.success("PDF print dialog opened!");
+      }, 250);
+    }
   };
 
   return (
@@ -365,7 +402,16 @@ export default function DocumentGenerator() {
                     className="macos-vibrancy"
                   >
                     <Download className="h-4 w-4 mr-2" />
-                    Download
+                    Download TXT
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleDownloadPDF}
+                    className="macos-vibrancy"
+                  >
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Download PDF
                   </Button>
                 </div>
               )}
