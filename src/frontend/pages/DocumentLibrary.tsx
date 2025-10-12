@@ -173,16 +173,24 @@ export default function DocumentLibrary() {
     setSelectedDocument(doc);
   };
 
+  const getFileUrl = useQuery(
+    api.documents.getFileUrl,
+    selectedDocument ? { storageId: selectedDocument.fileId } : "skip"
+  );
+
   const handleDownloadDocument = async (doc: any) => {
     try {
-      // Get the file URL from Convex storage
-      const fileUrl = await fetch(`/api/storage/${doc.fileId}`);
-      if (fileUrl.ok) {
+      if (!doc.fileId) {
+        toast.error("No file associated with this document");
+        return;
+      }
+
+      // The file URL is already fetched via useQuery when selectedDocument is set
+      if (getFileUrl) {
         toast.success("Download started");
-        // Open in new tab for download
-        window.open(fileUrl.url, '_blank');
+        window.open(getFileUrl, '_blank');
       } else {
-        toast.error("Failed to download document");
+        toast.error("Unable to retrieve file URL");
       }
     } catch (error) {
       console.error("Download error:", error);
