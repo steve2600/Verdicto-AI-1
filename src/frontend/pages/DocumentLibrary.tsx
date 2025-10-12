@@ -13,6 +13,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import {
   Upload,
   Search,
   FileText,
@@ -22,6 +31,8 @@ import {
   Clock,
   XCircle,
   Loader2,
+  Eye,
+  Download,
 } from "lucide-react";
 import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -30,6 +41,7 @@ import { toast } from "sonner";
 export default function DocumentLibrary() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedJurisdiction, setSelectedJurisdiction] = useState<string>("");
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
   
   const documents = useQuery(api.documents.list, {
     jurisdiction: selectedJurisdiction || undefined,
@@ -155,6 +167,27 @@ export default function DocumentLibrary() {
 
     // Reset file input
     event.target.value = "";
+  };
+
+  const handleViewDetails = (doc: any) => {
+    setSelectedDocument(doc);
+  };
+
+  const handleDownloadDocument = async (doc: any) => {
+    try {
+      // Get the file URL from Convex storage
+      const fileUrl = await fetch(`/api/storage/${doc.fileId}`);
+      if (fileUrl.ok) {
+        toast.success("Download started");
+        // Open in new tab for download
+        window.open(fileUrl.url, '_blank');
+      } else {
+        toast.error("Failed to download document");
+      }
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Failed to download document");
+    }
   };
 
   return (
@@ -287,9 +320,147 @@ export default function DocumentLibrary() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="macos-button">
-                      View Details
-                    </Button>
+                    <Sheet>
+                      <SheetTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="macos-button"
+                          onClick={() => handleViewDetails(doc)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent className="macos-card w-full sm:max-w-xl overflow-y-auto">
+                        <SheetHeader>
+                          <SheetTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5" />
+                            Document Details
+                          </SheetTitle>
+                          <SheetDescription>
+                            Complete information about this document
+                          </SheetDescription>
+                        </SheetHeader>
+
+                        {selectedDocument && (
+                          <div className="mt-6 space-y-6">
+                            {/* Document Info */}
+                            <div className="space-y-4">
+                              <div>
+                                <label className="text-sm font-medium text-muted-foreground">Title</label>
+                                <p className="text-lg font-semibold mt-1">{selectedDocument.title}</p>
+                              </div>
+
+                              <Separator />
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium text-muted-foreground">Jurisdiction</label>
+                                  <p className="mt-1">
+                                    <Badge variant="secondary">{selectedDocument.jurisdiction}</Badge>
+                                  </p>
+                                </div>
+
+                                <div>
+                                  <label className="text-sm font-medium text-muted-foreground">Status</label>
+                                  <p className="mt-1 flex items-center gap-2">
+                                    {getStatusIcon(selectedDocument.status)}
+                                    {getStatusBadge(selectedDocument.status)}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <Separator />
+
+                              <div>
+                                <label className="text-sm font-medium text-muted-foreground">Upload Date</label>
+                                <p className="mt-1 flex items-center gap-2">
+                                  <Calendar className="h-4 w-4" />
+                                  {new Date(selectedDocument.uploadDate).toLocaleString()}
+                                </p>
+                              </div>
+
+                              {selectedDocument.metadata && (
+                                <>
+                                  <Separator />
+                                  
+                                  <div className="space-y-3">
+                                    <h4 className="font-medium">Metadata</h4>
+                                    
+                                    <div className="grid grid-cols-2 gap-3 text-sm">
+                                      <div className="bg-muted/50 p-3 rounded-lg">
+                                        <label className="text-xs text-muted-foreground">Document Type</label>
+                                        <p className="font-medium mt-1">{selectedDocument.metadata.documentType}</p>
+                                      </div>
+
+                                      <div className="bg-muted/50 p-3 rounded-lg">
+                                        <label className="text-xs text-muted-foreground">Version</label>
+                                        <p className="font-medium mt-1">{selectedDocument.metadata.version}</p>
+                                      </div>
+
+                                      {selectedDocument.metadata.pageCount && (
+                                        <div className="bg-muted/50 p-3 rounded-lg">
+                                          <label className="text-xs text-muted-foreground">Pages</label>
+                                          <p className="font-medium mt-1">{selectedDocument.metadata.pageCount}</p>
+                                        </div>
+                                      )}
+
+                                      {selectedDocument.metadata.fileSize && (
+                                        <div className="bg-muted/50 p-3 rounded-lg">
+                                          <label className="text-xs text-muted-foreground">File Size</label>
+                                          <p className="font-medium mt-1">
+                                            {(selectedDocument.metadata.fileSize / 1024 / 1024).toFixed(2)} MB
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+
+                              <Separator />
+
+                              <div>
+                                <label className="text-sm font-medium text-muted-foreground">Document ID</label>
+                                <p className="mt-1 text-xs font-mono bg-muted/50 p-2 rounded">
+                                  {selectedDocument._id}
+                                </p>
+                              </div>
+
+                              {selectedDocument.fileId && (
+                                <div>
+                                  <label className="text-sm font-medium text-muted-foreground">Storage ID</label>
+                                  <p className="mt-1 text-xs font-mono bg-muted/50 p-2 rounded">
+                                    {selectedDocument.fileId}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="space-y-2 pt-4">
+                              <Button 
+                                className="w-full neon-glow"
+                                disabled={selectedDocument.status !== "processed"}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Use in Case Analysis
+                              </Button>
+                              
+                              <Button 
+                                variant="outline" 
+                                className="w-full macos-vibrancy"
+                                onClick={() => handleDownloadDocument(selectedDocument)}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Download Document
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </SheetContent>
+                    </Sheet>
                   </TableCell>
                 </motion.tr>
               ))}
