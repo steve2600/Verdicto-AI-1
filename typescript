@@ -1,1 +1,5 @@
-const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL || "https://verdicto-ai-production.up.railway.app";
+// Only passes documentIds if at least one is selected
+documentIds: selectedDocuments.length > 0 ? selectedDocuments : undefined
+
+// UI only allows single selection
+setSelectedDocuments([val as Id<"documents">]);
