@@ -177,6 +177,13 @@ export default function LiveVerdict() {
   };
 
   const downloadNotes = (notes: any) => {
+    const transcriptSummary = notes.transcript
+      .split(/[.!?]+/)
+      .filter((s: string) => s.trim().length > 20)
+      .slice(0, 5)
+      .map((sentence: string, idx: number) => `${idx + 1}. ${sentence.trim()}`)
+      .join('\n');
+
     const content = `
 LIVE VERDICT NOTES
 Generated: ${new Date(notes.timestamp).toLocaleString()}
@@ -195,6 +202,11 @@ ${notes.bulletPoints.map((point: string, idx: number) => `${idx + 1}. ${point}`)
 
 AI SUMMARY:
 ${notes.aiSummary}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TRANSCRIPT SUMMARY:
+${transcriptSummary}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
