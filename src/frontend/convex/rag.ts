@@ -211,3 +211,104 @@ export const searchDocuments = action({
     }
   },
 });
+
+/**
+ * Generate structured notes from transcript using RAG backend
+ */
+export const generateNotes = action({
+  args: {
+    transcript: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // Create a query for note generation
+      const response = await fetch(`${RAG_BACKEND_URL}/api/v1/documents/query`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer 8ad62148045cbf8137a66e1d8c0974e14f62a970b4fa91afb850f461abfbadb8",
+        },
+        body: JSON.stringify({
+          query: `Analyze the following court proceedings transcript and provide:
+1. Extract 5-8 key points as bullet points (each point should be concise and specific)
+2. Generate a comprehensive summary paragraph (3-4 sentences) that captures the essence of the proceedings
+
+Format your response as:
+KEY POINTS:
+- [point 1]
+- [point 2]
+...
+
+SUMMARY:
+[comprehensive summary paragraph]
+
+Transcript: ${args.transcript}`,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`RAG backend error: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      const ragResponse = result.answer || "";
+
+      // Parse the response to extract bullet points and summary
+      const bulletPoints = extractBulletPoints(ragResponse);
+      const aiSummary = extractSummary(ragResponse);
+
+      return {
+        success: true,
+        bulletPoints,
+        aiSummary,
+        rawResponse: ragResponse,
+      };
+    } catch (error) {
+      console.error("Note generation error:", error);
+      throw new Error(`Failed to generate notes: ${error}`);
+    }
+  },
+});
+
+// Helper function to extract bullet points from RAG response
+function extractBulletPoints(response: string): string[] {
+  const bulletPoints: string[] = [];
+  
+  // Look for KEY POINTS section
+  const keyPointsMatch = response.match(/KEY POINTS:?\s*([\s\S]*?)(?=SUMMARY:|$)/i);
+  
+  if (keyPointsMatch) {
+    const pointsText = keyPointsMatch[1];
+    // Extract lines starting with -, *, or numbers
+    const lines = pointsText.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.match(/^[-*•]\s+(.+)/) || trimmed.match(/^\d+\.\s+(.+)/)) {
+        const point = trimmed.replace(/^[-*•]\s+/, '').replace(/^\d+\.\s+/, '').trim();
+        if (point) bulletPoints.push(point);
+      }
+    }
+  }
+  
+  // Fallback: if no structured points found, create from sentences
+  if (bulletPoints.length === 0) {
+    const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 20);
+    bulletPoints.push(...sentences.slice(0, 5).map(s => s.trim()));
+  }
+  
+  return bulletPoints.slice(0, 8); // Limit to 8 points
+}
+
+// Helper function to extract summary from RAG response
+function extractSummary(response: string): string {
+  // Look for SUMMARY section
+  const summaryMatch = response.match(/SUMMARY:?\s*([\s\S]+?)$/i);
+  
+  if (summaryMatch) {
+    return summaryMatch[1].trim();
+  }
+  
+  // Fallback: use first 3-4 sentences
+  const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 20);
+  return sentences.slice(0, 3).join('. ') + '.';
+}

@@ -25,6 +25,7 @@ import type * as predictions from "../predictions.js";
 import type * as queries from "../queries.js";
 import type * as rag from "../rag.js";
 import type * as users from "../users.js";
+import type * as verdictNotes from "../verdictNotes.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   queries: typeof queries;
   rag: typeof rag;
   users: typeof users;
+  verdictNotes: typeof verdictNotes;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Mic, MicOff, Loader2, Gavel, FileText, AlertCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Mic, MicOff, Loader2, Gavel, FileText, AlertCircle, Download, History, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 export default function LiveVerdict() {
@@ -14,11 +14,18 @@ export default function LiveVerdict() {
   const [transcript, setTranscript] = useState("");
   const [recognition, setRecognition] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isGeneratingNotes, setIsGeneratingNotes] = useState(false);
   const [verdictAnalysis, setVerdictAnalysis] = useState<any>(null);
+  const [generatedNotes, setGeneratedNotes] = useState<any>(null);
   const [interimTranscript, setInterimTranscript] = useState("");
+  const [selectedHistoryNote, setSelectedHistoryNote] = useState<any>(null);
 
   const analyzeWithRAG = useAction(api.rag.analyzeQuery);
+  const generateNotesAction = useAction(api.rag.generateNotes);
   const createQuery = useMutation(api.queries.create);
+  const createNote = useMutation(api.verdictNotes.create);
+  const deleteNote = useMutation(api.verdictNotes.deleteNote);
+  const notesHistory = useQuery(api.verdictNotes.list);
 
   useEffect(() => {
     if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
@@ -77,6 +84,7 @@ export default function LiveVerdict() {
     } else {
       setTranscript("");
       setVerdictAnalysis(null);
+      setGeneratedNotes(null);
       recognition.start();
       setIsRecording(true);
       toast.success("Recording started");
@@ -86,6 +94,7 @@ export default function LiveVerdict() {
   const clearTranscript = () => {
     setTranscript("");
     setVerdictAnalysis(null);
+    setGeneratedNotes(null);
     toast.success("Transcript cleared");
   };
 
@@ -99,13 +108,11 @@ export default function LiveVerdict() {
     try {
       toast.info("Analyzing proceedings...");
 
-      // Create a query for the transcript
       const queryId = await createQuery({
         queryText: `Analyze the following court proceedings and provide: 1) A verdict determination, 2) Legal conclusion with reasoning, 3) Recommended punishment or sentence if applicable. Proceedings: ${transcript}`,
         uploadedFiles: undefined,
       });
 
-      // Analyze with RAG backend
       const result = await analyzeWithRAG({
         queryId,
         queryText: `Analyze the following court proceedings and provide: 1) A verdict determination, 2) Legal conclusion with reasoning, 3) Recommended punishment or sentence if applicable. Proceedings: ${transcript}`,
@@ -126,6 +133,96 @@ export default function LiveVerdict() {
       toast.error("Failed to analyze proceedings");
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const generateNotes = async () => {
+    if (!transcript.trim()) {
+      toast.error("No transcript to generate notes from");
+      return;
+    }
+
+    setIsGeneratingNotes(true);
+    try {
+      toast.info("Generating notes...");
+
+      const result = await generateNotesAction({
+        transcript: transcript,
+      });
+
+      if (result.success) {
+        const notes = {
+          bulletPoints: result.bulletPoints,
+          aiSummary: result.aiSummary,
+          transcript: transcript,
+          timestamp: Date.now(),
+        };
+
+        setGeneratedNotes(notes);
+
+        // Save to history
+        const title = `Verdict Notes - ${new Date().toLocaleString()}`;
+        await createNote({
+          title,
+          transcript: transcript,
+          bulletPoints: result.bulletPoints,
+          aiSummary: result.aiSummary,
+        });
+
+        toast.success("Notes generated and saved to history!");
+      }
+    } catch (error) {
+      console.error("Note generation error:", error);
+      toast.error("Failed to generate notes");
+    } finally {
+      setIsGeneratingNotes(false);
+    }
+  };
+
+  const downloadNotes = (notes: any, title?: string) => {
+    const content = `
+${title || 'LIVE VERDICT NOTES'}
+Generated: ${new Date(notes.timestamp).toLocaleString()}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TRANSCRIPT:
+${notes.transcript}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+KEY POINTS:
+${notes.bulletPoints.map((point: string, idx: number) => `${idx + 1}. ${point}`).join('\n')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+AI SUMMARY:
+${notes.aiSummary}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Generated by LexAI - Legal AI Assistant
+    `.trim();
+
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `verdict-notes-${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast.success("Notes downloaded!");
+  };
+
+  const handleDeleteNote = async (noteId: any) => {
+    try {
+      await deleteNote({ noteId });
+      toast.success("Note deleted from history");
+    } catch (error) {
+      toast.error("Failed to delete note");
     }
   };
 
@@ -150,12 +247,12 @@ export default function LiveVerdict() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-4xl mx-auto"
+        className="max-w-6xl mx-auto"
       >
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2 text-foreground">Live Verdict</h1>
           <p className="text-muted-foreground">
-            Record live proceedings and get real-time transcription
+            Record live proceedings and get real-time transcription with AI analysis
           </p>
         </div>
 
@@ -166,7 +263,7 @@ export default function LiveVerdict() {
               size="lg"
               variant={isRecording ? "destructive" : "default"}
               className="gap-2"
-              disabled={isAnalyzing}
+              disabled={isAnalyzing || isGeneratingNotes}
             >
               {isRecording ? (
                 <>
@@ -186,7 +283,7 @@ export default function LiveVerdict() {
                 <Button 
                   onClick={analyzeVerdict} 
                   variant="default"
-                  disabled={isAnalyzing}
+                  disabled={isAnalyzing || isGeneratingNotes}
                   className="gap-2"
                 >
                   {isAnalyzing ? (
@@ -198,6 +295,24 @@ export default function LiveVerdict() {
                     <>
                       <Gavel className="h-5 w-5" />
                       Generate Verdict
+                    </>
+                  )}
+                </Button>
+                <Button 
+                  onClick={generateNotes} 
+                  variant="default"
+                  disabled={isAnalyzing || isGeneratingNotes}
+                  className="gap-2"
+                >
+                  {isGeneratingNotes ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-5 w-5" />
+                      Generate Notes
                     </>
                   )}
                 </Button>
@@ -235,71 +350,291 @@ export default function LiveVerdict() {
           </div>
         </Card>
 
-        {verdictAnalysis && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6"
-          >
-            <Card className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Gavel className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold">Verdict Analysis</h3>
-                  <p className="text-sm text-muted-foreground">AI-powered legal analysis</p>
-                </div>
-              </div>
-
-              <Separator className="my-4" />
-
-              <div className="space-y-4">
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Verdict
-                    </h4>
-                    <Badge variant="default">
-                      {Math.round(verdictAnalysis.confidence * 100)}% Confidence
-                    </Badge>
+        {/* Generated Notes Display */}
+        <AnimatePresence>
+          {generatedNotes && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="mb-6"
+            >
+              <Card className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Generated Notes</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(generatedNotes.timestamp).toLocaleString()}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-foreground">{verdictAnalysis.verdict}</p>
+                  <Button
+                    onClick={() => downloadNotes(generatedNotes)}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download
+                  </Button>
                 </div>
 
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <h4 className="font-semibold mb-2 flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Legal Conclusion
-                  </h4>
-                  <p className="text-muted-foreground">{verdictAnalysis.conclusion}</p>
+                <Separator className="my-4" />
+
+                <div className="space-y-4">
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Key Points
+                    </h4>
+                    <ul className="space-y-2">
+                      {generatedNotes.bulletPoints.map((point: string, idx: number) => (
+                        <li key={idx} className="flex gap-2 text-foreground">
+                          <span className="text-primary font-semibold">{idx + 1}.</span>
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      AI Summary
+                    </h4>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {generatedNotes.aiSummary}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Verdict Analysis Display */}
+        <AnimatePresence>
+          {verdictAnalysis && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="mb-6"
+            >
+              <Card className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                    <Gavel className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">Verdict Analysis</h3>
+                    <p className="text-sm text-muted-foreground">AI-powered legal analysis</p>
+                  </div>
                 </div>
 
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <h4 className="font-semibold mb-2 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    Recommended Punishment
-                  </h4>
-                  <p className="text-muted-foreground">{verdictAnalysis.punishment}</p>
-                </div>
+                <Separator className="my-4" />
 
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <h4 className="font-semibold mb-2">Full Analysis</h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {verdictAnalysis.fullAnalysis}
-                  </p>
+                <div className="space-y-4">
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Verdict
+                      </h4>
+                      <Badge variant="default">
+                        {Math.round(verdictAnalysis.confidence * 100)}% Confidence
+                      </Badge>
+                    </div>
+                    <p className="text-foreground">{verdictAnalysis.verdict}</p>
+                  </div>
+
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Legal Conclusion
+                    </h4>
+                    <p className="text-muted-foreground">{verdictAnalysis.conclusion}</p>
+                  </div>
+
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      Recommended Punishment
+                    </h4>
+                    <p className="text-muted-foreground">{verdictAnalysis.punishment}</p>
+                  </div>
+
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-2">Full Analysis</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {verdictAnalysis.fullAnalysis}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Live Verdict History Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-6"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <History className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl font-bold text-foreground">Live Verdict History</h2>
+          </div>
+
+          {notesHistory && notesHistory.length > 0 ? (
+            <div className="grid gap-4">
+              {notesHistory.map((note: any) => (
+                <Card key={note._id} className="p-4 hover:shadow-lg transition-shadow">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-5 w-5 text-primary" />
+                        <h3 className="font-semibold text-foreground">{note.title}</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {new Date(note.timestamp).toLocaleString()}
+                      </p>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {note.aiSummary}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedHistoryNote(note)}
+                        className="gap-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                        View
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => downloadNotes(note, note.title)}
+                        className="gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeleteNote(note._id)}
+                        className="gap-2 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-8 text-center">
+              <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                No verdict notes in history yet. Generate notes from a transcript to see them here.
+              </p>
             </Card>
-          </motion.div>
-        )}
+          )}
+        </motion.div>
+
+        {/* History Note Detail Modal */}
+        <AnimatePresence>
+          {selectedHistoryNote && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+              onClick={() => setSelectedHistoryNote(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-background rounded-lg p-6 max-w-3xl w-full max-h-[80vh] overflow-y-auto"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-2xl font-bold">{selectedHistoryNote.title}</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedHistoryNote(null)}
+                  >
+                    ✕
+                  </Button>
+                </div>
+
+                <p className="text-sm text-muted-foreground mb-4">
+                  {new Date(selectedHistoryNote.timestamp).toLocaleString()}
+                </p>
+
+                <Separator className="my-4" />
+
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold mb-2">Transcript</h4>
+                    <div className="bg-muted/50 p-4 rounded-lg max-h-48 overflow-y-auto">
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                        {selectedHistoryNote.transcript}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-2">Key Points</h4>
+                    <div className="bg-muted/50 p-4 rounded-lg">
+                      <ul className="space-y-2">
+                        {selectedHistoryNote.bulletPoints.map((point: string, idx: number) => (
+                          <li key={idx} className="flex gap-2 text-foreground">
+                            <span className="text-primary font-semibold">{idx + 1}.</span>
+                            <span>{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-2">AI Summary</h4>
+                    <div className="bg-muted/50 p-4 rounded-lg">
+                      <p className="text-muted-foreground leading-relaxed">
+                        {selectedHistoryNote.aiSummary}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={() => downloadNotes(selectedHistoryNote, selectedHistoryNote.title)}
+                    className="w-full gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download Notes
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <Card className="p-4 bg-muted/30">
           <p className="text-sm text-muted-foreground">
             <strong>Note:</strong> This feature uses your browser's speech recognition
-            capabilities. After recording, click "Generate Verdict" to analyze the proceedings
-            and receive an AI-powered verdict, conclusion, and punishment recommendation.
+            capabilities. After recording, click "Generate Verdict" for AI analysis or
+            "Generate Notes" for a structured summary with key points. All generated notes
+            are automatically saved to your history.
           </p>
         </Card>
       </motion.div>
