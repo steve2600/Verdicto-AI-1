@@ -12,7 +12,8 @@ import asyncio
 import time
 
 from app.utils import load_pdf_ultra_fast, cleanup_temp_files
-from app.qa_chain import get_ultra_fast_qa_chain, cleanup_client
+from app.qa_chain import get_ultra_fast_qa_chain, cleanup_client, get_weaviate_client, get_embeddings, get_llm
+from weaviate.classes.query import HybridFusion
 
 from fastapi.concurrency import run_in_threadpool
 import httpx
@@ -189,15 +190,16 @@ async def ingest_document(
 
         # Create QA chain (this ingests into Weaviate)
         print(f"🔗 Creating QA chain and ingesting into Weaviate...")
-        qa, cleanup_fn = await get_ultra_fast_qa_chain(docs)
+        qa, cleanup_fn, collection_name = await get_ultra_fast_qa_chain(docs, return_collection_name=True)
         
-        print(f"✅ Document ingested successfully into vector store")
+        print(f"✅ Document ingested successfully into vector store: {collection_name}")
         
-        # Update status to completed
+        # Update status to completed with collection name
         document_store[request.document_id] = {
             "status": "completed",
             "title": request.title,
             "chunks": len(docs),
+            "collection_name": collection_name,
             "completed_at": time.time()
         }
 
@@ -254,31 +256,98 @@ async def query_documents(
     authorization: Optional[str] = Header(None)
 ):
     """
-    Query ingested documents
+    Query ingested documents with proper context
     """
     if not authorization or authorization.split()[-1] != TEAM_TOKEN:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     try:
-        # For now, we'll use a placeholder document URL since we need the QA chain
-        # In production, you'd retrieve the actual document from storage
-        placeholder_url = "https://example.com/placeholder.pdf"
+        # Check if document_id is provided and exists in our store
+        if request.document_id and request.document_id in document_store:
+            doc_info = document_store[request.document_id]
+            
+            # Check if document is processed
+            if doc_info.get("status") != "completed":
+                return {
+                    "status": "error",
+                    "query": request.query,
+                    "answer": f"Document is not ready for querying. Current status: {doc_info.get('status')}",
+                    "document_id": request.document_id
+                }
+            
+            # Get the collection name for this document
+            collection_name = doc_info.get("collection_name")
+            
+            if not collection_name:
+                raise HTTPException(status_code=500, detail="Document collection not found")
+            
+            # Query the specific document's collection
+            weaviate_client = get_weaviate_client()
+            collection = weaviate_client.collections.get(collection_name)
+            embeddings = get_embeddings()
+            query_vector = embeddings.embed_query(request.query)
+            
+            # Perform hybrid search on the specific document
+            response = collection.query.hybrid(
+                query=request.query,
+                vector=query_vector,
+                limit=4,
+                alpha=0.3,
+                fusion_type=HybridFusion.RANKED
+            )
+            
+            # Extract relevant context
+            context_chunks = []
+            for item in response.objects:
+                text = item.properties.get("text", "")
+                if text and len(text) > 100:
+                    context_chunks.append(text)
+            
+            if not context_chunks:
+                return {
+                    "status": "success",
+                    "query": request.query,
+                    "answer": "I couldn't find relevant information in the selected document to answer your question.",
+                    "document_id": request.document_id
+                }
+            
+            # Generate answer using LLM with context
+            llm = get_llm()
+            context_text = "\n\n".join(context_chunks[:3])  # Use top 3 chunks
+            
+            prompt = f"""Based on the following document context, answer the question accurately and comprehensively in 3-4 sentences.
+
+Context from document:
+{context_text}
+
+Question: {request.query}
+
+Answer (3-4 sentences, professional legal tone):"""
+            
+            answer = llm.invoke(prompt).content
+            
+            return {
+                "status": "success",
+                "query": request.query,
+                "answer": answer,
+                "document_id": request.document_id,
+                "chunks_used": len(context_chunks)
+            }
         
-        # Create a minimal QA chain for querying
-        # Note: This is simplified - in production you'd maintain persistent vector store
-        docs = []  # Empty docs since we're querying existing vectors
-        qa, cleanup_fn = await get_ultra_fast_qa_chain(docs)
-        
-        answer = await process_single_question_ultra_fast(qa, request.query, timeout=10)
-        
-        return {
-            "status": "success",
-            "query": request.query,
-            "answer": answer,
-            "document_id": request.document_id
-        }
+        else:
+            # No document selected - query across all documents (if any exist)
+            # For now, return a helpful message
+            return {
+                "status": "success",
+                "query": request.query,
+                "answer": "Please select a specific document from your Document Library to get context-aware answers. Without a document selected, I cannot provide accurate legal analysis.",
+                "document_id": None
+            }
 
     except Exception as e:
+        print(f"Query error: {str(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
 
 

@@ -296,7 +296,7 @@ def get_cleanup_wrapper(collection_name: str):
     return wrapper
 
 
-async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = True):
+async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = True, return_collection_name: bool = False):
     k = get_ultra_fast_k(len(docs))
     temp_vectorstore, collection_name = await create_ultra_fast_vectorstore(docs)
     llm = get_llm()
@@ -350,7 +350,11 @@ async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = Tr
     )
 
     cleanup_fn = get_cleanup_wrapper(collection_name)
-    return qa, cleanup_fn
+    
+    if return_collection_name:
+        return qa, cleanup_fn, collection_name
+    else:
+        return qa, cleanup_fn
 
 
 def cleanup_client():
