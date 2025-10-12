@@ -20,6 +20,7 @@ import type * as cases from "../cases.js";
 import type * as documents from "../documents.js";
 import type * as hackathonFeatures from "../hackathonFeatures.js";
 import type * as http from "../http.js";
+import type * as liveVerdicts from "../liveVerdicts.js";
 import type * as mlBiasAnalysis from "../mlBiasAnalysis.js";
 import type * as predictions from "../predictions.js";
 import type * as queries from "../queries.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   documents: typeof documents;
   hackathonFeatures: typeof hackathonFeatures;
   http: typeof http;
+  liveVerdicts: typeof liveVerdicts;
   mlBiasAnalysis: typeof mlBiasAnalysis;
   predictions: typeof predictions;
   queries: typeof queries;
