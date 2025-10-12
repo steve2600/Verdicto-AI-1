@@ -153,6 +153,16 @@ const schema = defineSchema(
     })
       .index("by_prediction", ["predictionId"])
       .index("by_user", ["userId"]),
+
+    // Live Verdict Notes History
+    verdictNotes: defineTable({
+      userId: v.id("users"),
+      title: v.string(),
+      transcript: v.string(),
+      bulletPoints: v.array(v.string()),
+      aiSummary: v.string(),
+      timestamp: v.number(),
+    }).index("by_user", ["userId"]),
   },
   {
     schemaValidation: false,
