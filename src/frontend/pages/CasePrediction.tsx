@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { useLocation } from "react-router";
 import {
   Upload,
   Send,
@@ -42,6 +43,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function CasePrediction() {
+  const location = useLocation();
   const [queryText, setQueryText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentQueryId, setCurrentQueryId] = useState<Id<"queries"> | null>(null);
@@ -104,6 +106,15 @@ export default function CasePrediction() {
     };
     loadLanguages();
   }, [getSupportedLanguages]);
+
+  // Handle pre-selected document from navigation state
+  useEffect(() => {
+    if (location.state?.selectedDocumentId) {
+      const docId = location.state.selectedDocumentId as Id<"documents">;
+      setSelectedDocuments([docId]);
+      toast.info("Document pre-selected for analysis");
+    }
+  }, [location.state]);
 
   // Auto-translate prediction results when language changes
   useEffect(() => {

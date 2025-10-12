@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router";
 import {
   Table,
   TableBody,
@@ -39,6 +40,7 @@ import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 
 export default function DocumentLibrary() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedJurisdiction, setSelectedJurisdiction] = useState<string>("");
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
@@ -196,6 +198,17 @@ export default function DocumentLibrary() {
       console.error("Download error:", error);
       toast.error("Failed to download document");
     }
+  };
+
+  const handleUseInCaseAnalysis = (doc: any) => {
+    if (doc.status !== "processed") {
+      toast.error("Document must be processed before use in analysis");
+      return;
+    }
+    
+    // Navigate to Case Prediction page with document ID in state
+    navigate("/case-prediction", { state: { selectedDocumentId: doc._id } });
+    toast.success(`Document "${doc.title}" ready for case analysis`);
   };
 
   return (
@@ -451,6 +464,7 @@ export default function DocumentLibrary() {
                               <Button 
                                 className="w-full neon-glow"
                                 disabled={selectedDocument.status !== "processed"}
+                                onClick={() => handleUseInCaseAnalysis(selectedDocument)}
                               >
                                 <Eye className="h-4 w-4 mr-2" />
                                 Use in Case Analysis
