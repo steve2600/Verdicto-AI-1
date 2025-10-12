@@ -50,6 +50,7 @@ export default function CasePrediction() {
   const [recognition, setRecognition] = useState<any>(null);
   const [interimTranscript, setInterimTranscript] = useState("");
   const [selectedDocuments, setSelectedDocuments] = useState<Id<"documents">[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   
   // Multilingual features
   const [selectedLanguage, setSelectedLanguage] = useState("en");
@@ -71,6 +72,10 @@ export default function CasePrediction() {
 
   const createQuery = useMutation(api.queries.create);
   const analyzeWithRAG = useAction(api.rag.analyzeQuery);
+  const generateUploadUrl = useMutation(api.documents.generateUploadUrl);
+  const createDocument = useMutation(api.documents.create);
+  const processDocumentWithRAG = useAction(api.rag.processDocument);
+  
   const prediction = useQuery(
     api.predictions.getByQuery,
     currentQueryId ? { queryId: currentQueryId } : "skip"
@@ -145,6 +150,83 @@ export default function CasePrediction() {
 
     translateResults();
   }, [prediction, selectedLanguage, translateResponse]);
+
+  const handleFileUpload = async (files: File[]) => {
+    if (files.length === 0) return;
+    
+    setIsUploading(true);
+    const uploadedDocIds: Id<"documents">[] = [];
+    
+    try {
+      for (const file of files) {
+        // Validate file
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`${file.name} exceeds 10MB limit`);
+          continue;
+        }
+        
+        if (!file.type.includes('pdf') && !file.name.endsWith('.pdf')) {
+          toast.error(`${file.name} is not a PDF file`);
+          continue;
+        }
+        
+        toast.info(`Uploading ${file.name}...`);
+        
+        // Step 1: Get upload URL
+        const uploadUrl = await generateUploadUrl();
+        
+        // Step 2: Upload file to Convex storage
+        const uploadResponse = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        
+        if (!uploadResponse.ok) {
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+        
+        const { storageId } = await uploadResponse.json();
+        
+        // Step 3: Create document record
+        const documentId = await createDocument({
+          title: file.name,
+          jurisdiction: "General",
+          fileId: storageId,
+          metadata: {
+            documentType: "legal_document",
+            version: "1.0",
+            fileSize: file.size,
+          },
+        });
+        
+        uploadedDocIds.push(documentId);
+        toast.success(`${file.name} uploaded successfully`);
+        
+        // Step 4: Process with RAG backend
+        toast.info(`Processing ${file.name} with AI...`);
+        await processDocumentWithRAG({
+          documentId,
+          fileUrl: storageId,
+          title: file.name,
+        });
+        
+        toast.success(`${file.name} processed and ready for analysis`);
+      }
+      
+      // Auto-select uploaded documents
+      if (uploadedDocIds.length > 0) {
+        setSelectedDocuments(uploadedDocIds);
+        toast.success(`${uploadedDocIds.length} document(s) ready for case analysis`);
+      }
+      
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload documents. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!queryText.trim()) {
@@ -410,7 +492,6 @@ export default function CasePrediction() {
                 placeholder="Ask about a case, upload documents, or describe a legal scenario..."
                 value={queryText + interimTranscript}
                 onChange={(e) => {
-                  // Only update queryText if not recording, to prevent overwriting live transcription
                   if (!isRecording) {
                     setQueryText(e.target.value);
                   }
@@ -424,25 +505,32 @@ export default function CasePrediction() {
               <Button
                 variant="outline"
                 className="macos-vibrancy"
-                disabled={isAnalyzing}
+                disabled={isAnalyzing || isUploading}
                 onClick={() => {
                   const input = document.createElement('input');
                   input.type = 'file';
-                  input.accept = '.pdf,.doc,.docx';
+                  input.accept = '.pdf';
                   input.multiple = true;
-                  input.onchange = (e: any) => {
-                    const files = Array.from(e.target.files || []);
+                  input.onchange = async (e: any) => {
+                    const files = Array.from(e.target.files || []) as File[];
                     if (files.length > 0) {
-                      toast.success(`${files.length} file(s) selected`);
-                      // TODO: Implement file upload to Convex storage
-                      toast.info("File upload to be implemented");
+                      await handleFileUpload(files);
                     }
                   };
                   input.click();
                 }}
               >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Documents
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Documents
+                  </>
+                )}
               </Button>
               <Button
                 variant="outline"
