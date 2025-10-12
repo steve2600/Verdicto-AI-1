@@ -90,6 +90,13 @@ const router = createBrowserRouter([
           return { Component: LiveVerdict };
         },
       },
+      {
+        path: "live-verdict-history",
+        lazy: async () => {
+          const { default: LiveVerdictHistory } = await import("./pages/LiveVerdictHistory");
+          return { Component: LiveVerdictHistory };
+        },
+      },
     ],
   },
   {
