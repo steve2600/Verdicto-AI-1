@@ -149,14 +149,14 @@ export default function Landing() {
         </motion.div>
 
         {/* Main Headline */}
-        <motion.h1
+          <motion.h1
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.8 }}
           className="text-5xl md:text-7xl lg:text-8xl font-light tracking-tight mb-6 text-foreground leading-tight"
           style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300, letterSpacing: '-0.02em' }}
         >
-          Justice Accelerated by AI
+          Verdicto - AI
         </motion.h1>
 
         {/* Subheading */}
