@@ -70,6 +70,20 @@ export default function BiasInsights() {
     ? Object.values(granularAverages).reduce((a, b) => a + b, 0) / Object.keys(granularAverages).length
     : 0.85;
 
+  // Mock data for visualization when no predictions exist
+  const mockGranularAverages = {
+    gender_bias: 0.42,
+    caste_bias: 0.28,
+    religious_bias: 0.35,
+    regional_bias: 0.51,
+    socioeconomic_bias: 0.67,
+    judicial_attitude_bias: 0.45,
+    language_bias: 0.33
+  };
+
+  // Use real data if available, otherwise use mock data
+  const displayAverages = granularAverages || mockGranularAverages;
+
   const getBiasColor = (score: number) => {
     if (score > 0.6) return "text-red-500";
     if (score > 0.3) return "text-yellow-500";
@@ -103,7 +117,7 @@ export default function BiasInsights() {
       </motion.div>
 
       {/* Bias Components Chart */}
-      {granularAverages && (
+      {displayAverages && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -126,7 +140,7 @@ export default function BiasInsights() {
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={Object.entries(granularAverages).map(([category, score]) => ({
+                  data={Object.entries(displayAverages).map(([category, score]) => ({
                     name: getBiasLabel(category),
                     score: Math.round((score as number) * 100),
                     fill: (score as number) > 0.6 
