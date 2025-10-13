@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -83,7 +83,7 @@ export default function BiasInsights() {
 
   // Always use mock data for now to ensure chart is visible
   // Use real data if available, otherwise use mock data
-  const displayAverages = granularAverages && Object.keys(granularAverages).length > 0 
+  const displayAverages = (granularAverages && Object.keys(granularAverages).length > 0) 
     ? granularAverages 
     : mockGranularAverages;
 
@@ -106,6 +106,20 @@ export default function BiasInsights() {
     return labels[category] || category;
   };
 
+  // Memoize chart data to keep the graph stable on re-renders
+  const chartData = useMemo(() => {
+    return Object.entries(displayAverages).map(([category, score]) => ({
+      name: getBiasLabel(category),
+      score: Math.round((score as number) * 100),
+      fill:
+        (score as number) > 0.6
+          ? "hsl(var(--destructive))"
+          : (score as number) > 0.3
+          ? "hsl(var(--warning))"
+          : "hsl(var(--success))",
+    }));
+  }, [displayAverages]);
+
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto">
       <motion.div
@@ -126,7 +140,7 @@ export default function BiasInsights() {
         transition={{ delay: 0.1 }}
         className="mb-8"
       >
-          <Card className="glass-strong p-8 neon-glow">
+        <Card className="glass-strong p-8 neon-glow">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
                 <BarChart3 className="h-6 w-6 text-primary" />
@@ -142,15 +156,7 @@ export default function BiasInsights() {
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={Object.entries(displayAverages).map(([category, score]) => ({
-                    name: getBiasLabel(category),
-                    score: Math.round((score as number) * 100),
-                    fill: (score as number) > 0.6 
-                      ? "hsl(var(--destructive))" 
-                      : (score as number) > 0.3 
-                      ? "hsl(var(--warning))" 
-                      : "hsl(var(--success))"
-                  }))}
+                  data={chartData}
                   margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
