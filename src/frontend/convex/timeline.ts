@@ -1,7 +1,9 @@
 "use node";
 import { v } from "convex/values";
-import { action, internalMutation } from "./_generated/server";
+import { action, mutation, internalMutation } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 
 const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL || "https://verdicto-ai-1-production-3dbc.up.railway.app";
 
@@ -95,19 +97,20 @@ export const getDocumentTimeline = action({
   args: {
     documentId: v.id("documents"),
   },
-  handler: async (ctx, args) => {
-    const document = await ctx.runQuery(internal.documents.getByIdInternal, {
+  handler: async (ctx, args): Promise<any[]> => {
+    const document: any = await ctx.runQuery(internal.documents.getByIdInternal, {
       documentId: args.documentId,
     });
 
-    if (!document) {
-      return { events: [], documentTitle: "" };
+    if (!document || !document.timelineEvents) {
+      return [];
     }
 
-    return {
-      events: document.timelineEvents || [],
+    return document.timelineEvents.map((event: any) => ({
+      ...event,
+      documentId: args.documentId,
       documentTitle: document.title,
-    };
+    }));
   },
 });
 

@@ -660,7 +660,7 @@ export default function CasePrediction() {
                 <Progress value={prediction.confidenceScore * 100} className="h-3" />
               </div>
 
-              {prediction.biasFlags.length > 0 && (
+              {(prediction.biasFlags || []).length > 0 && (
                 <>
                   <Separator className="my-4" />
                   <div>
@@ -669,7 +669,7 @@ export default function CasePrediction() {
                       Bias Alerts
                     </h4>
                     <div className="space-y-2">
-                      {prediction.biasFlags.map((flag: any, index: number) => (
+                      {(prediction.biasFlags || []).map((flag: any, index: number) => (
                         <div
                           key={index}
                           className="macos-vibrancy p-3 rounded-lg flex items-start gap-3"
@@ -811,7 +811,7 @@ export default function CasePrediction() {
                 Supporting Evidence
               </h3>
               <div className="space-y-3">
-                {prediction.evidenceSnippets.map((snippet: any, index: number) => {
+                {(prediction.evidenceSnippets || []).map((snippet: any, index: number) => {
                   const relatedCase = cases?.find((c: any) => c._id === snippet.caseId);
                   return (
                     <motion.div
