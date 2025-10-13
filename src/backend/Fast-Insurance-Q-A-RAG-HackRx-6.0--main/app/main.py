@@ -188,9 +188,9 @@ async def ingest_document(
         
         print(f"✅ Extracted {len(docs)} document chunks")
 
-        # Create QA chain (this ingests into Weaviate)
+        # Create QA chain (this ingests into Weaviate with deterministic naming)
         print(f"🔗 Creating QA chain and ingesting into Weaviate...")
-        qa, cleanup_fn, collection_name = await get_ultra_fast_qa_chain(docs, return_collection_name=True)
+        qa, cleanup_fn, collection_name = await get_ultra_fast_qa_chain(docs, return_collection_name=True, document_id=request.document_id)
         
         print(f"✅ Document ingested successfully into vector store: {collection_name}")
         
