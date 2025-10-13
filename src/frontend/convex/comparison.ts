@@ -1,8 +1,9 @@
 "use node";
 import { v } from "convex/values";
-import { action, mutation, query } from "./_generated/server";
+import { action, mutation, query, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 
 const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL || "https://verdicto-ai-1-production-3dbc.up.railway.app";
 
@@ -13,13 +14,13 @@ export const compareDocuments = action({
   args: {
     documentIds: v.array(v.id("documents")),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<any> => {
     try {
       const userId = await getAuthUserId(ctx);
       if (!userId) throw new Error("Not authenticated");
 
       // Create comparison record
-      const comparisonId = await ctx.runMutation(internal.comparison.createComparison, {
+      const comparisonId: Id<"documentComparisons"> = await ctx.runMutation(internal.comparison.createComparisonInternal, {
         userId,
         documentIds: args.documentIds,
       });
@@ -93,7 +94,7 @@ Documents to compare: ${documents.map((d, i) => `[${i}] ${d.title}`).join(', ')}
       const { conflicts, overallRiskScore } = parseConflicts(ragResponse, documents);
 
       // Update comparison with results
-      await ctx.runMutation(internal.comparison.updateComparison, {
+      await ctx.runMutation(internal.comparison.updateComparisonInternal, {
         comparisonId,
         conflicts,
         overallRiskScore,
@@ -202,12 +203,12 @@ export const deleteComparison = mutation({
 /**
  * Internal mutation to create comparison record
  */
-export const createComparison = mutation({
+export const createComparisonInternal = internalMutation({
   args: {
     userId: v.id("users"),
     documentIds: v.array(v.id("documents")),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Id<"documentComparisons">> => {
     return await ctx.db.insert("documentComparisons", {
       userId: args.userId,
       documentIds: args.documentIds,
@@ -222,7 +223,7 @@ export const createComparison = mutation({
 /**
  * Internal mutation to update comparison results
  */
-export const updateComparison = mutation({
+export const updateComparisonInternal = internalMutation({
   args: {
     comparisonId: v.id("documentComparisons"),
     conflicts: v.any(),

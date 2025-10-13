@@ -36,11 +36,11 @@ export default function BiasInsights() {
     predictions && predictions.length > 0
       ? predictions.reduce((acc, p) => {
           const avgBias =
-            p.biasFlags.reduce((sum, flag) => {
+            (p.biasFlags || []).reduce((sum, flag) => {
               const severityScore =
                 flag.severity === "high" ? 0.3 : flag.severity === "medium" ? 0.6 : 0.9;
               return sum + severityScore;
-            }, 0) / (p.biasFlags.length || 1);
+            }, 0) / ((p.biasFlags || []).length || 1);
           return acc + avgBias;
         }, 0) / predictions.length
       : 0.85;
