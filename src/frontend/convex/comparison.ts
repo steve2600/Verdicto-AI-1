@@ -1,4 +1,3 @@
-"use node";
 import { v } from "convex/values";
 import { action, mutation, query, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
