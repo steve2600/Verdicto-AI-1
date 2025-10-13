@@ -117,13 +117,12 @@ export default function BiasInsights() {
       </motion.div>
 
       {/* Bias Components Chart */}
-      {displayAverages && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-8"
-        >
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mb-8"
+      >
           <Card className="glass-strong p-8 neon-glow">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
@@ -208,8 +207,7 @@ export default function BiasInsights() {
               </div>
             </div>
           </Card>
-        </motion.div>
-      )}
+      </motion.div>
 
       {/* Recent Predictions with Bias Flags */}
       <div className="space-y-4">
