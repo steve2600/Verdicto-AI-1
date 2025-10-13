@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, TrendingUp, Shield, BarChart3, Loader2 } from "lucide-react";
 import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Bar, BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 
 export default function BiasInsights() {
   const predictions = useQuery(api.predictions.listByUser);
@@ -100,70 +102,98 @@ export default function BiasInsights() {
         </p>
       </motion.div>
 
-      {/* Overall Score */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="mb-8"
-      >
-        <Card className="glass-strong p-8 neon-glow">
-          <div className="flex items-center gap-6">
-            <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center neon-glow">
-              <Shield className="h-10 w-10 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-medium mb-2">Overall Bias Score</h3>
-              <div className="flex items-center gap-4">
-                <Progress value={overallAverage * 100} className="h-4 flex-1" />
-                <span className="text-3xl font-bold text-primary">
-                  {Math.round(overallAverage * 100)}%
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                {overallAverage > 0.6
-                  ? "High bias detected - review recommended"
-                  : overallAverage > 0.3
-                  ? "Moderate bias levels detected"
-                  : "Low bias detected - good fairness"}
-              </p>
-            </div>
-          </div>
-        </Card>
-      </motion.div>
-
-      {/* Granular Bias Categories */}
+      {/* Bias Components Chart */}
       {granularAverages && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.1 }}
           className="mb-8"
         >
-          <h2 className="text-2xl font-bold mb-4">Bias Categories Analysis</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.entries(granularAverages).map(([category, score], index) => (
-              <motion.div
-                key={category}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-              >
-                <Card className="glass-strong p-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium text-sm">{getBiasLabel(category)}</h4>
-                    <span className={`text-2xl font-bold ${getBiasColor(score)}`}>
-                      {Math.round(score * 100)}%
-                    </span>
-                  </div>
-                  <Progress value={score * 100} className="h-3 mb-2" />
-                  <p className="text-xs text-muted-foreground">
-                    {score > 0.6 ? "High" : score > 0.3 ? "Moderate" : "Low"} detection rate
-                  </p>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
+          <Card className="glass-strong p-8 neon-glow">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                <BarChart3 className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">Bias Components Analysis</h2>
+                <p className="text-sm text-muted-foreground">
+                  Detection rates across all 7 bias categories
+                </p>
+              </div>
+            </div>
+            
+            <div className="h-[400px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={Object.entries(granularAverages).map(([category, score]) => ({
+                    name: getBiasLabel(category),
+                    score: Math.round((score as number) * 100),
+                    fill: (score as number) > 0.6 
+                      ? "hsl(var(--destructive))" 
+                      : (score as number) > 0.3 
+                      ? "hsl(var(--warning))" 
+                      : "hsl(var(--success))"
+                  }))}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="name" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                    className="text-xs"
+                    tick={{ fill: "hsl(var(--muted-foreground))" }}
+                  />
+                  <YAxis 
+                    label={{ value: 'Detection Rate (%)', angle: -90, position: 'insideLeft' }}
+                    className="text-xs"
+                    tick={{ fill: "hsl(var(--muted-foreground))" }}
+                  />
+                  <ChartTooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="glass-strong p-3 rounded-lg border border-border">
+                            <p className="font-medium text-sm mb-1">{data.name}</p>
+                            <p className="text-2xl font-bold" style={{ color: data.fill }}>
+                              {data.score}%
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {data.score > 60 ? "High" : data.score > 30 ? "Moderate" : "Low"} detection rate
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar 
+                    dataKey="score" 
+                    radius={[8, 8, 0, 0]}
+                    fill="hsl(var(--primary))"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="mt-6 flex items-center justify-center gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(var(--success))" }} />
+                <span className="text-muted-foreground">Low (&lt;30%)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(var(--warning))" }} />
+                <span className="text-muted-foreground">Moderate (30-60%)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(var(--destructive))" }} />
+                <span className="text-muted-foreground">High (&gt;60%)</span>
+              </div>
+            </div>
+          </Card>
         </motion.div>
       )}
 
