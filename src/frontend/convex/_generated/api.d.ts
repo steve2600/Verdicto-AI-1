@@ -24,7 +24,6 @@ import type * as http from "../http.js";
 import type * as mlBiasAnalysis from "../mlBiasAnalysis.js";
 import type * as predictions from "../predictions.js";
 import type * as queries from "../queries.js";
-import type * as rag from "../rag.js";
 import type * as timeline from "../timeline.js";
 import type * as users from "../users.js";
 import type * as verdictNotes from "../verdictNotes.js";
@@ -49,7 +48,6 @@ declare const fullApi: ApiFromModules<{
   mlBiasAnalysis: typeof mlBiasAnalysis;
   predictions: typeof predictions;
   queries: typeof queries;
-  rag: typeof rag;
   timeline: typeof timeline;
   users: typeof users;
   verdictNotes: typeof verdictNotes;
