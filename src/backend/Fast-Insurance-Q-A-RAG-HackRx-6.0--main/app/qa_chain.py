@@ -260,12 +260,19 @@ async def ultra_fast_upload(vectorstore_instance, docs: List[Document]):
     await asyncio.gather(*tasks, return_exceptions=True)
 
 
-def get_unique_collection_name():
-    return f"FastDoc_{int(datetime.now().timestamp())}_{str(uuid.uuid4())[:6]}"
+def get_unique_collection_name(document_id: str = None):
+    """Generate collection name - deterministic if document_id provided"""
+    if document_id:
+        # Use document_id for deterministic naming (survives restarts)
+        return f"Document_{document_id}"
+    else:
+        # Fallback to unique name for temporary collections
+        return f"FastDoc_{int(datetime.now().timestamp())}_{str(uuid.uuid4())[:6]}"
 
 
-async def create_ultra_fast_vectorstore(docs: List[Document]):
-    collection_name = get_unique_collection_name()
+async def create_ultra_fast_vectorstore(docs: List[Document], document_id: str = None):
+    """Create vectorstore with optional deterministic naming"""
+    collection_name = get_unique_collection_name(document_id)
     embeddings = get_embeddings()
     temp_vectorstore = WeaviateVectorStore(
         client=get_weaviate_client(),
@@ -296,9 +303,9 @@ def get_cleanup_wrapper(collection_name: str):
     return wrapper
 
 
-async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = True, return_collection_name: bool = False):
+async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = True, return_collection_name: bool = False, document_id: str = None):
     k = get_ultra_fast_k(len(docs))
-    temp_vectorstore, collection_name = await create_ultra_fast_vectorstore(docs)
+    temp_vectorstore, collection_name = await create_ultra_fast_vectorstore(docs, document_id)
     llm = get_llm()
 
     retriever = UltraFastRetriever(
