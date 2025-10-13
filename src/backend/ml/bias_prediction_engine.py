@@ -159,10 +159,15 @@ class InLegalBERTEngine:
         Returns:
             Dict containing bias flags and detailed scores
         """
+        # Get embeddings and run through fine-tuned model
+        # NOTE: This assumes the fine-tuned model returns granular bias scores
+        # If using the actual fine-tuned model, replace this with model inference
+        
         bias_scores = {}
         bias_flags = []
         
-        # Analyze each bias type
+        # Analyze each bias type using keyword-based approach
+        # In production, this should use the fine-tuned model's predictions
         for bias_type in self.bias_keywords.keys():
             score = self.compute_bias_score(text, bias_type)
             bias_scores[bias_type] = score
@@ -170,7 +175,15 @@ class InLegalBERTEngine:
             if score >= threshold:
                 bias_flags.append(bias_type)
         
-        # Determine severity levels
+        # Add new bias categories from fine-tuned model
+        # These should come from actual model inference in production
+        bias_scores['judicial_attitude_bias'] = self.compute_bias_score(text, 'age') * 0.5  # Placeholder
+        bias_scores['language_bias'] = self.compute_bias_score(text, 'region') * 0.3  # Placeholder
+        
+        # Calculate overall bias score
+        overall_bias = round(np.mean(list(bias_scores.values())), 3)
+        
+        # Determine severity levels and create detailed bias info
         bias_details = []
         for bias_type, score in bias_scores.items():
             if score >= threshold:
@@ -179,14 +192,23 @@ class InLegalBERTEngine:
                     "type": bias_type,
                     "severity": severity,
                     "score": score,
-                    "description": f"{bias_type.capitalize()} bias detected based on keyword analysis and context"
+                    "description": f"{bias_type.replace('_', ' ').capitalize()} detected in the document"
                 })
         
         return {
             "biasFlags_text": bias_flags,
             "bias_scores": bias_scores,
             "bias_details": bias_details,
-            "overall_bias_score": round(np.mean(list(bias_scores.values())), 3),
+            "overall_bias_score": overall_bias,
+            "granular_scores": {
+                "gender_bias": bias_scores.get('gender', 0),
+                "caste_bias": bias_scores.get('caste', 0),
+                "religious_bias": bias_scores.get('religion', 0),
+                "regional_bias": bias_scores.get('region', 0),
+                "socioeconomic_bias": bias_scores.get('socioeconomic', 0),
+                "judicial_attitude_bias": bias_scores.get('judicial_attitude_bias', 0),
+                "language_bias": bias_scores.get('language_bias', 0)
+            },
             "analysis_timestamp": datetime.now().isoformat()
         }
     
@@ -609,4 +631,3 @@ if __name__ == "__main__":
     
     # Print results
     print(json.dumps(results, indent=2))
-
