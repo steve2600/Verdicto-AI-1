@@ -29,12 +29,12 @@ export default function Landing() {
   const generatePaths = () => {
     const paths = [];
     const numPaths = 15;
-    
+
     for (let i = 0; i < numPaths; i++) {
       const startY = (i / numPaths) * 100;
       const midY = startY + (Math.random() - 0.5) * 40;
       const endY = startY + (Math.random() - 0.5) * 30;
-      
+
       // Create more complex curved paths
       paths.push({
         id: i,
@@ -43,6 +43,7 @@ export default function Landing() {
         delay: Math.random() * 3,
       });
     }
+
     return paths;
   };
 
@@ -156,7 +157,7 @@ export default function Landing() {
           className="text-5xl md:text-7xl lg:text-8xl font-light tracking-tight mb-6 text-foreground leading-tight"
           style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300, letterSpacing: '-0.02em' }}
         >
-          Justice Accelerated by AI
+          Verdicto-AI
         </motion.h1>
 
         {/* Subheading */}
