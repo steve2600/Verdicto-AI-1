@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+src/backend/ml/training/
+src/backend/ml/bias_model_final/
