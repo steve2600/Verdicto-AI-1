@@ -210,7 +210,9 @@ async def document_bias_analysis(request: DocumentBiasRequest):
             "status": "success",
             "analysis_id": f"doc_bias_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
             "timestamp": datetime.now().isoformat(),
-            "results": results
+            "results": results,
+            "granular_bias_scores": results.get("granular_scores", {}),
+            "overall_bias": results.get("overall_bias_score", 0)
         }
         
     except Exception as e:
