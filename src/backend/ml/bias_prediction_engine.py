@@ -36,11 +36,13 @@ class InLegalBERTEngine:
         Initialize the InLegalBERT model and tokenizer
         
         Args:
-            model_name: HuggingFace model identifier
+            model_name: HuggingFace model identifier (use your fine-tuned model path)
         """
         print(f"Loading InLegalBERT model: {model_name}")
         
         # Load tokenizer and base model for embeddings
+        # TODO: Replace "law-ai/InLegalBERT" with your fine-tuned model path
+        # Example: "your-username/inlegalbert-bias-finetuned"
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.base_model = AutoModel.from_pretrained(model_name)
         
