@@ -262,60 +262,68 @@ async def query_documents(
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     try:
-        # Check if document_id is provided and exists in our store
-        if request.document_id and request.document_id in document_store:
-            doc_info = document_store[request.document_id]
-            
-            # Check if document is processed
-            if doc_info.get("status") != "completed":
-                return {
-                    "status": "error",
-                    "query": request.query,
-                    "answer": f"Document is not ready for querying. Current status: {doc_info.get('status')}",
-                    "document_id": request.document_id
-                }
-            
-            # Get the collection name for this document
-            collection_name = doc_info.get("collection_name")
+        # Check if document_id is provided
+        if request.document_id:
+            # First check if it's in our store
+            if request.document_id in document_store:
+                doc_info = document_store[request.document_id]
+                
+                # Check if document is processed
+                if doc_info.get("status") != "completed":
+                    return {
+                        "status": "error",
+                        "query": request.query,
+                        "answer": f"Document is not ready for querying. Current status: {doc_info.get('status')}",
+                        "document_id": request.document_id
+                    }
+                
+                # Get the collection name for this document
+                collection_name = doc_info.get("collection_name")
+            else:
+                # Document not in store - try to use the document_id directly as collection name
+                # This handles documents uploaded in previous sessions
+                collection_name = f"Document_{request.document_id}"
+                print(f"⚠️ Document {request.document_id} not in store, attempting to query collection: {collection_name}")
             
             if not collection_name:
                 raise HTTPException(status_code=500, detail="Document collection not found")
             
-            # Query the specific document's collection
-            weaviate_client = get_weaviate_client()
-            collection = weaviate_client.collections.get(collection_name)
-            embeddings = get_embeddings()
-            query_vector = embeddings.embed_query(request.query)
-            
-            # Perform hybrid search on the specific document
-            response = collection.query.hybrid(
-                query=request.query,
-                vector=query_vector,
-                limit=4,
-                alpha=0.3,
-                fusion_type=HybridFusion.RANKED
-            )
-            
-            # Extract relevant context
-            context_chunks = []
-            for item in response.objects:
-                text = item.properties.get("text", "")
-                if text and len(text) > 100:
-                    context_chunks.append(text)
-            
-            if not context_chunks:
-                return {
-                    "status": "success",
-                    "query": request.query,
-                    "answer": "I couldn't find relevant information in the selected document to answer your question.",
-                    "document_id": request.document_id
-                }
-            
-            # Generate answer using LLM with context
-            llm = get_llm()
-            context_text = "\n\n".join(context_chunks[:3])  # Use top 3 chunks
-            
-            prompt = f"""Based on the following document context, answer the question accurately and comprehensively in 3-4 sentences.
+            try:
+                # Query the specific document's collection
+                weaviate_client = get_weaviate_client()
+                collection = weaviate_client.collections.get(collection_name)
+                embeddings = get_embeddings()
+                query_vector = embeddings.embed_query(request.query)
+                
+                # Perform hybrid search on the specific document
+                response = collection.query.hybrid(
+                    query=request.query,
+                    vector=query_vector,
+                    limit=4,
+                    alpha=0.3,
+                    fusion_type=HybridFusion.RANKED
+                )
+                
+                # Extract relevant context
+                context_chunks = []
+                for item in response.objects:
+                    text = item.properties.get("text", "")
+                    if text and len(text) > 100:
+                        context_chunks.append(text)
+                
+                if not context_chunks:
+                    return {
+                        "status": "success",
+                        "query": request.query,
+                        "answer": "I couldn't find relevant information in the selected document to answer your question.",
+                        "document_id": request.document_id
+                    }
+                
+                # Generate answer using LLM with context
+                llm = get_llm()
+                context_text = "\n\n".join(context_chunks[:3])  # Use top 3 chunks
+                
+                prompt = f"""Based on the following document context, answer the question accurately and comprehensively in 3-4 sentences.
 
 Context from document:
 {context_text}
@@ -323,16 +331,25 @@ Context from document:
 Question: {request.query}
 
 Answer (3-4 sentences, professional legal tone):"""
-            
-            answer = llm.invoke(prompt).content
-            
-            return {
-                "status": "success",
-                "query": request.query,
-                "answer": answer,
-                "document_id": request.document_id,
-                "chunks_used": len(context_chunks)
-            }
+                
+                answer = llm.invoke(prompt).content
+                
+                return {
+                    "status": "success",
+                    "query": request.query,
+                    "answer": answer,
+                    "document_id": request.document_id,
+                    "chunks_used": len(context_chunks)
+                }
+            except Exception as collection_error:
+                # Collection doesn't exist or query failed
+                print(f"❌ Failed to query collection {collection_name}: {str(collection_error)}")
+                return {
+                    "status": "error",
+                    "query": request.query,
+                    "answer": f"The selected document needs to be re-uploaded and processed. Please upload it again from the Document Library. Error: Document collection not found in vector store.",
+                    "document_id": request.document_id
+                }
         
         else:
             # No document selected - query across all documents (if any exist)
