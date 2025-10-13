@@ -32,18 +32,60 @@ export default function BiasInsights() {
     loadSystemicBias();
   }, [analyzeSystemicBias]);
 
-  const averageBiasScore =
-    predictions && predictions.length > 0
-      ? predictions.reduce((acc, p) => {
-          const avgBias =
-            (p.biasFlags || []).reduce((sum, flag) => {
-              const severityScore =
-                flag.severity === "high" ? 0.3 : flag.severity === "medium" ? 0.6 : 0.9;
-              return sum + severityScore;
-            }, 0) / ((p.biasFlags || []).length || 1);
-          return acc + avgBias;
-        }, 0) / predictions.length
-      : 0.85;
+  // Calculate average for each granular bias category
+  const calculateGranularAverages = () => {
+    if (!predictions || predictions.length === 0) return null;
+    
+    const categories = [
+      "gender_bias",
+      "caste_bias",
+      "religious_bias",
+      "regional_bias",
+      "socioeconomic_bias",
+      "judicial_attitude_bias",
+      "language_bias"
+    ];
+    
+    const averages: Record<string, number> = {};
+    
+    categories.forEach(category => {
+      const sum = predictions.reduce((acc, p) => {
+        const biasFlag = (p.biasFlags || []).find((f: any) => 
+          f.type.toLowerCase().replace(/\s+/g, '_') === category
+        );
+        // Safely access score property with type assertion
+        const score = (biasFlag as any)?.score || 0;
+        return acc + score;
+      }, 0);
+      averages[category] = predictions.length > 0 ? sum / predictions.length : 0;
+    });
+    
+    return averages;
+  };
+
+  const granularAverages = calculateGranularAverages();
+  const overallAverage = granularAverages 
+    ? Object.values(granularAverages).reduce((a, b) => a + b, 0) / Object.keys(granularAverages).length
+    : 0.85;
+
+  const getBiasColor = (score: number) => {
+    if (score > 0.6) return "text-red-500";
+    if (score > 0.3) return "text-yellow-500";
+    return "text-green-500";
+  };
+
+  const getBiasLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      gender_bias: "Gender Bias",
+      caste_bias: "Caste Bias",
+      religious_bias: "Religious Bias",
+      regional_bias: "Regional Bias",
+      socioeconomic_bias: "Socioeconomic Bias",
+      judicial_attitude_bias: "Judicial Attitude Bias",
+      language_bias: "Language Bias"
+    };
+    return labels[category] || category;
+  };
 
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto">
@@ -73,22 +115,57 @@ export default function BiasInsights() {
             <div className="flex-1">
               <h3 className="text-lg font-medium mb-2">Overall Bias Score</h3>
               <div className="flex items-center gap-4">
-                <Progress value={averageBiasScore * 100} className="h-4 flex-1" />
+                <Progress value={overallAverage * 100} className="h-4 flex-1" />
                 <span className="text-3xl font-bold text-primary">
-                  {Math.round(averageBiasScore * 100)}%
+                  {Math.round(overallAverage * 100)}%
                 </span>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                {averageBiasScore > 0.75
-                  ? "Excellent - Low bias detected"
-                  : averageBiasScore > 0.5
-                  ? "Good - Moderate bias levels"
-                  : "Needs attention - High bias detected"}
+                {overallAverage > 0.6
+                  ? "High bias detected - review recommended"
+                  : overallAverage > 0.3
+                  ? "Moderate bias levels detected"
+                  : "Low bias detected - good fairness"}
               </p>
             </div>
           </div>
         </Card>
       </motion.div>
+
+      {/* Granular Bias Categories */}
+      {granularAverages && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-8"
+        >
+          <h2 className="text-2xl font-bold mb-4">Bias Categories Analysis</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Object.entries(granularAverages).map(([category, score], index) => (
+              <motion.div
+                key={category}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 * index }}
+              >
+                <Card className="glass-strong p-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium text-sm">{getBiasLabel(category)}</h4>
+                    <span className={`text-2xl font-bold ${getBiasColor(score)}`}>
+                      {Math.round(score * 100)}%
+                    </span>
+                  </div>
+                  <Progress value={score * 100} className="h-3 mb-2" />
+                  <p className="text-xs text-muted-foreground">
+                    {score > 0.6 ? "High" : score > 0.3 ? "Moderate" : "Low"} detection rate
+                  </p>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Recent Predictions with Bias Flags */}
       <div className="space-y-4">
@@ -123,14 +200,14 @@ export default function BiasInsights() {
                 </div>
               </div>
 
-              {prediction.biasFlags.length > 0 && (
+              {(prediction.biasFlags || []).length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4" />
-                    Bias Flags ({prediction.biasFlags.length})
+                    Bias Flags ({(prediction.biasFlags || []).length})
                   </h4>
                   <div className="grid gap-2">
-                    {prediction.biasFlags.map((flag: any, flagIndex: number) => (
+                    {(prediction.biasFlags || []).map((flag: any, flagIndex: number) => (
                       <div key={flagIndex} className="glass p-3 rounded-lg flex items-center gap-3">
                         <Badge
                           variant={
@@ -145,6 +222,11 @@ export default function BiasInsights() {
                         </Badge>
                         <div className="flex-1">
                           <span className="font-medium text-sm">{flag.type}</span>
+                          {flag.score && (
+                            <span className="text-xs text-muted-foreground ml-2">
+                              ({Math.round(flag.score * 100)}%)
+                            </span>
+                          )}
                           <p className="text-xs text-muted-foreground mt-1">
                             {flag.description}
                           </p>

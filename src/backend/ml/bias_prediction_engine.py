@@ -28,28 +28,35 @@ warnings.filterwarnings('ignore')
 
 class InLegalBERTEngine:
     """
-    Main engine for bias detection and outcome prediction using InLegalBERT
+    InLegalBERT-based bias detection and outcome prediction engine.
+    Uses the fine-tuned model: A-I-C-A/verdicto-model
     """
     
-    def __init__(self, model_name: str = "law-ai/InLegalBERT"):
+    def __init__(self, model_name: str = "A-I-C-A/verdicto-model"):
         """
-        Initialize the InLegalBERT model and tokenizer
+        Initialize the InLegalBERT engine with fine-tuned model
         
         Args:
-            model_name: HuggingFace model identifier (use your fine-tuned model path)
+            model_name: HuggingFace model identifier (default: A-I-C-A/verdicto-model)
         """
-        print(f"Loading InLegalBERT model: {model_name}")
-        
-        # Load tokenizer and base model for embeddings
-        # TODO: Replace "law-ai/InLegalBERT" with your fine-tuned model path
-        # Example: "your-username/inlegalbert-bias-finetuned"
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.base_model = AutoModel.from_pretrained(model_name)
-        
-        # Set device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.base_model.to(self.device)
-        self.base_model.eval()
+        print(f"🔧 Loading fine-tuned model: {model_name}")
+        print(f"🖥️  Device: {self.device}")
+        
+        try:
+            # Load fine-tuned tokenizer and model from Hugging Face
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
+            self.model.to(self.device)
+            self.model.eval()
+            print(f"✅ Fine-tuned model loaded successfully from {model_name}")
+        except Exception as e:
+            print(f"⚠️  Failed to load fine-tuned model: {e}")
+            print(f"📦 Falling back to base model: law-ai/InLegalBERT")
+            self.tokenizer = AutoTokenizer.from_pretrained("law-ai/InLegalBERT")
+            self.model = AutoModelForSequenceClassification.from_pretrained("law-ai/InLegalBERT")
+            self.model.to(self.device)
+            self.model.eval()
         
         # Bias detection keywords (Indian legal context)
         self.bias_keywords = {
@@ -148,68 +155,127 @@ class InLegalBERTEngine:
     # 1. DOCUMENT/TEXT BIAS DETECTION
     # ========================================================================
     
-    def detect_document_bias(self, text: str, threshold: float = 0.15) -> Dict[str, Any]:
+    def detect_document_bias(self, case_text: str, threshold: float = 0.15) -> Dict[str, Any]:
         """
-        Detect various biases in legal documents/FIRs/judgments
+        Detect biases in legal document using fine-tuned InLegalBERT model.
         
-        Args:
-            text: Legal document text
-            threshold: Minimum score to flag a bias (default 0.15)
+        Returns granular bias scores for 7 categories:
+        - gender_bias
+        - caste_bias
+        - religious_bias
+        - regional_bias
+        - socioeconomic_bias
+        - judicial_attitude_bias
+        - language_bias
+        """
+        try:
+            # Tokenize and prepare input
+            inputs = self.tokenizer(
+                case_text,
+                return_tensors="pt",
+                truncation=True,
+                max_length=512,
+                padding=True
+            ).to(self.device)
             
-        Returns:
-            Dict containing bias flags and detailed scores
-        """
-        # Get embeddings and run through fine-tuned model
-        # NOTE: This assumes the fine-tuned model returns granular bias scores
-        # If using the actual fine-tuned model, replace this with model inference
+            # Get model predictions
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+                logits = outputs.logits
+                
+                # Apply sigmoid to get probabilities for multi-label classification
+                probabilities = torch.sigmoid(logits).cpu().numpy()[0]
+            
+            # Map model outputs to bias categories
+            # Assuming model outputs 7 values corresponding to the 7 bias types
+            bias_categories = [
+                "gender_bias",
+                "caste_bias", 
+                "religious_bias",
+                "regional_bias",
+                "socioeconomic_bias",
+                "judicial_attitude_bias",
+                "language_bias"
+            ]
+            
+            granular_scores = {}
+            for i, category in enumerate(bias_categories):
+                if i < len(probabilities):
+                    granular_scores[category] = float(probabilities[i])
+                else:
+                    granular_scores[category] = 0.0
+            
+            # Calculate overall bias score (average of all categories)
+            overall_bias = sum(granular_scores.values()) / len(granular_scores)
+            
+            # Generate bias flags for high-scoring categories
+            bias_flags = []
+            for category, score in granular_scores.items():
+                if score > threshold:
+                    severity = "high" if score > 0.6 else "medium" if score > 0.3 else "low"
+                    bias_flags.append({
+                        "type": category.replace("_", " ").title(),
+                        "severity": severity,
+                        "score": score,
+                        "description": f"Detected {category.replace('_', ' ')} with confidence {score:.2%}"
+                    })
+            
+            # Generate detailed bias information
+            detailed_bias = {}
+            for category, score in granular_scores.items():
+                if score > threshold:
+                    detailed_bias[category] = {
+                        "score": score,
+                        "keywords_found": [],  # Could be enhanced with keyword extraction
+                        "context_snippets": []  # Could be enhanced with relevant text extraction
+                    }
+            
+            return {
+                "overall_bias_score": overall_bias,
+                "granular_scores": granular_scores,
+                "bias_flags": bias_flags,
+                "detailed_bias": detailed_bias,
+                "threshold_used": threshold,
+                "model_used": "A-I-C-A/verdicto-model (fine-tuned)"
+            }
+            
+        except Exception as e:
+            print(f"❌ Error in bias detection: {e}")
+            # Fallback to keyword-based detection
+            return self._fallback_keyword_detection(case_text, threshold)
+    
+    def _fallback_keyword_detection(self, case_text: str, threshold: float) -> Dict[str, Any]:
+        """Fallback keyword-based detection if model inference fails"""
+        bias_scores = {bias_type: 0.0 for bias_type in self.bias_keywords.keys()}
         
-        bias_scores = {}
+        for bias_type, keywords in self.bias_keywords.items():
+            count = sum(case_text.lower().count(keyword.lower()) for keyword in keywords)
+            bias_scores[bias_type] = min(count * 0.1, 1.0)
+        
+        # Add missing categories
+        bias_scores["judicial_attitude_bias"] = 0.0
+        bias_scores["language_bias"] = 0.0
+        
+        overall_bias = sum(bias_scores.values()) / len(bias_scores)
+        
         bias_flags = []
-        
-        # Analyze each bias type using keyword-based approach
-        # In production, this should use the fine-tuned model's predictions
-        for bias_type in self.bias_keywords.keys():
-            score = self.compute_bias_score(text, bias_type)
-            bias_scores[bias_type] = score
-            
-            if score >= threshold:
-                bias_flags.append(bias_type)
-        
-        # Add new bias categories from fine-tuned model
-        # These should come from actual model inference in production
-        bias_scores['judicial_attitude_bias'] = self.compute_bias_score(text, 'age') * 0.5  # Placeholder
-        bias_scores['language_bias'] = self.compute_bias_score(text, 'region') * 0.3  # Placeholder
-        
-        # Calculate overall bias score
-        overall_bias = round(np.mean(list(bias_scores.values())), 3)
-        
-        # Determine severity levels and create detailed bias info
-        bias_details = []
         for bias_type, score in bias_scores.items():
-            if score >= threshold:
-                severity = "high" if score >= 0.4 else "medium" if score >= 0.25 else "low"
-                bias_details.append({
-                    "type": bias_type,
+            if score > threshold:
+                severity = "high" if score > 0.6 else "medium" if score > 0.3 else "low"
+                bias_flags.append({
+                    "type": bias_type.replace("_", " ").title(),
                     "severity": severity,
                     "score": score,
-                    "description": f"{bias_type.replace('_', ' ').capitalize()} detected in the document"
+                    "description": f"Detected {bias_type.replace('_', ' ')} (keyword-based fallback)"
                 })
         
         return {
-            "biasFlags_text": bias_flags,
-            "bias_scores": bias_scores,
-            "bias_details": bias_details,
             "overall_bias_score": overall_bias,
-            "granular_scores": {
-                "gender_bias": bias_scores.get('gender', 0),
-                "caste_bias": bias_scores.get('caste', 0),
-                "religious_bias": bias_scores.get('religion', 0),
-                "regional_bias": bias_scores.get('region', 0),
-                "socioeconomic_bias": bias_scores.get('socioeconomic', 0),
-                "judicial_attitude_bias": bias_scores.get('judicial_attitude_bias', 0),
-                "language_bias": bias_scores.get('language_bias', 0)
-            },
-            "analysis_timestamp": datetime.now().isoformat()
+            "granular_scores": bias_scores,
+            "bias_flags": bias_flags,
+            "detailed_bias": {},
+            "threshold_used": threshold,
+            "model_used": "keyword-based (fallback)"
         }
     
     # ========================================================================

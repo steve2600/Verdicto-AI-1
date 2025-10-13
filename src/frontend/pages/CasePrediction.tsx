@@ -666,32 +666,39 @@ export default function CasePrediction() {
                   <div>
                     <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4" />
-                      Bias Alerts
+                      Bias Detection Results ({(prediction.biasFlags || []).length} categories)
                     </h4>
-                    <div className="space-y-2">
+                    <div className="grid md:grid-cols-2 gap-3">
                       {(prediction.biasFlags || []).map((flag: any, index: number) => (
                         <div
                           key={index}
-                          className="macos-vibrancy p-3 rounded-lg flex items-start gap-3"
+                          className="macos-vibrancy p-4 rounded-lg flex items-start gap-3"
                         >
                           <AlertTriangle
                             className={`h-5 w-5 mt-0.5 ${getSeverityColor(flag.severity)}`}
                           />
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center justify-between mb-1">
                               <span className="font-medium text-sm">{flag.type}</span>
-                              <Badge
-                                variant={
-                                  flag.severity === "high"
-                                    ? "destructive"
-                                    : flag.severity === "medium"
-                                    ? "default"
-                                    : "secondary"
-                                }
-                                className="text-xs"
-                              >
-                                {flag.severity}
-                              </Badge>
+                              <div className="flex items-center gap-2">
+                                {flag.score && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {Math.round(flag.score * 100)}%
+                                  </span>
+                                )}
+                                <Badge
+                                  variant={
+                                    flag.severity === "high"
+                                      ? "destructive"
+                                      : flag.severity === "medium"
+                                      ? "default"
+                                      : "secondary"
+                                  }
+                                  className="text-xs"
+                                >
+                                  {flag.severity}
+                                </Badge>
+                              </div>
                             </div>
                             <p className="text-sm text-muted-foreground">
                               {flag.description}
