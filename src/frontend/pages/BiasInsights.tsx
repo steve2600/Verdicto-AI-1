@@ -81,8 +81,11 @@ export default function BiasInsights() {
     language_bias: 0.33
   };
 
+  // Always use mock data for now to ensure chart is visible
   // Use real data if available, otherwise use mock data
-  const displayAverages = granularAverages || mockGranularAverages;
+  const displayAverages = granularAverages && Object.keys(granularAverages).length > 0 
+    ? granularAverages 
+    : mockGranularAverages;
 
   const getBiasColor = (score: number) => {
     if (score > 0.6) return "text-red-500";
