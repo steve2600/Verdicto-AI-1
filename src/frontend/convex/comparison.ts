@@ -20,7 +20,7 @@ export const compareDocuments = action({
       if (!userId) throw new Error("Not authenticated");
 
       // Create comparison record
-      const comparisonId: Id<"documentComparisons"> = await ctx.runMutation(internal.comparison.createComparisonInternal, {
+      const comparisonId = await ctx.runMutation(internal.comparison.createComparisonInternal, {
         userId,
         documentIds: args.documentIds,
       });
@@ -208,7 +208,7 @@ export const createComparisonInternal = internalMutation({
     userId: v.id("users"),
     documentIds: v.array(v.id("documents")),
   },
-  handler: async (ctx, args): Promise<Id<"documentComparisons">> => {
+  handler: async (ctx, args) => {
     return await ctx.db.insert("documentComparisons", {
       userId: args.userId,
       documentIds: args.documentIds,
