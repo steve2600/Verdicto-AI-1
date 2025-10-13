@@ -32,7 +32,6 @@ export default function AuthPage({ redirectAfterAuth = "/dashboard" }: AuthPageP
   const handleRequestOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       if (!convexUrl) {
         throw new Error("Convex URL is not configured (VITE_CONVEX_URL).");
@@ -57,7 +56,6 @@ export default function AuthPage({ redirectAfterAuth = "/dashboard" }: AuthPageP
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       if (!convexUrl) {
         throw new Error("Convex URL is not configured (VITE_CONVEX_URL).");
@@ -139,7 +137,7 @@ export default function AuthPage({ redirectAfterAuth = "/dashboard" }: AuthPageP
           {/* Title */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-light mb-2 text-foreground tracking-tight">
-              Welcome to Verdicto
+              Welcome to Verdicto-AI
             </h1>
             <p className="text-muted-foreground font-light">
               {step === "email" ? "Enter your email to continue" : "Enter the verification code"}
