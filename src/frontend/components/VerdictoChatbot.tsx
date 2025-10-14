@@ -30,18 +30,18 @@ export function VerdictoChatbot() {
       // no-op
     }
 
+    // Use a longer delay to ensure DOM is fully rendered
     const scrollToBottom = () => {
-      try {
-        // Smooth if supported
-        (viewport as any).scrollTo?.({ top: viewport.scrollHeight, behavior: "smooth" });
-      } catch {
-        viewport.scrollTop = viewport.scrollHeight;
-      }
+      viewport.scrollTop = viewport.scrollHeight;
     };
 
-    // Double rAF ensures DOM and layout are fully committed before scrolling
+    // Triple rAF + setTimeout for maximum reliability
     requestAnimationFrame(() => {
-      requestAnimationFrame(scrollToBottom);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setTimeout(scrollToBottom, 50);
+        });
+      });
     });
   }, [messages, isLoading]);
   const handleSend = () => {
