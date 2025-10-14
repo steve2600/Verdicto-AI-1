@@ -234,7 +234,7 @@ export default function DocumentComparison() {
                       <div key={idx} className="rounded-lg border border-border bg-muted/30 p-3">
                         <div className="flex items-start gap-2 mb-2">
                           <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5 text-orange-500" />
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-sm font-medium text-foreground capitalize">{c.type.replace(/_/g, " ")}</span>
                               <Badge className={getSeverityColor(c.severity)} variant="outline">
