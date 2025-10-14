@@ -1,1 +1,2 @@
-setTranscript((prev) => prev + finalTranscript + interimTranscript);
+// Current implementation in rag.ts:
+biasImpact = (1 - biasScore) * 0.8;  // 80% weight for bias
