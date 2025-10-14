@@ -72,13 +72,13 @@ export default function BiasInsights() {
 
   // Mock data for visualization when no predictions exist
   const mockGranularAverages = {
-    gender_bias: 0.42,
-    caste_bias: 0.28,
-    religious_bias: 0.35,
-    regional_bias: 0.51,
-    socioeconomic_bias: 0.67,
-    judicial_attitude_bias: 0.45,
-    language_bias: 0.33
+    gender_bias: 0.38,
+    caste_bias: 0.52,
+    religious_bias: 0.29,
+    regional_bias: 0.64,
+    socioeconomic_bias: 0.71,
+    judicial_attitude_bias: 0.41,
+    language_bias: 0.47
   };
 
   // Always use mock data for now to ensure chart is visible
