@@ -101,7 +101,7 @@ export function VerdictoChatbot() {
 
               {/* Messages */}
               <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-                <div className="space-y-4">
+                <div className="space-y-4" role="log" aria-live="polite">
                   {messages.length === 0 && (
                     <div className="text-center py-8">
                       <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
