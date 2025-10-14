@@ -47,7 +47,7 @@ export default function CasePrediction() {
   const [queryText, setQueryText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentQueryId, setCurrentQueryId] = useState<Id<"queries"> | null>(null);
-  const [userMode, setUserMode] = useState<"citizen" | "lawyer">("citizen");
+  const [userMode, setUserMode] = useState<"citizen" | "lawyer">("lawyer");
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
   const [interimTranscript, setInterimTranscript] = useState("");
@@ -122,6 +122,34 @@ export default function CasePrediction() {
       toast.info("Document pre-selected for analysis");
     }
   }, [location.state]);
+
+  // Auto-simplify when switching to Citizen Mode
+  useEffect(() => {
+    if (!prediction || userMode !== "citizen") {
+      setSimplifiedText("");
+      return;
+    }
+
+    const autoSimplify = async () => {
+      setIsSimplifying(true);
+      try {
+        const result = await simplifyText({
+          legalText: prediction.prediction,
+          readingLevel: "simple"
+        });
+        
+        if (result.status === "success" && result.simplification?.simplified_text) {
+          setSimplifiedText(result.simplification.simplified_text);
+        }
+      } catch (error) {
+        console.error("Auto-simplification error:", error);
+      } finally {
+        setIsSimplifying(false);
+      }
+    };
+
+    autoSimplify();
+  }, [prediction, userMode, simplifyText]);
 
   // Auto-translate prediction results when language changes
   useEffect(() => {
@@ -676,14 +704,21 @@ Please analyze this modified case and provide a prediction.`;
                       score={prediction.confidenceScore}
                     />
                   </div>
-                  {isTranslatingResponse && selectedLanguage !== "en" ? (
+                  {userMode === "citizen" && isSimplifying ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Simplifying for citizen mode...</span>
+                    </div>
+                  ) : isTranslatingResponse && selectedLanguage !== "en" ? (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       <span>Translating...</span>
                     </div>
                   ) : (
                     <p className="text-muted-foreground">
-                      {selectedLanguage !== "en" && translatedPrediction 
+                      {userMode === "citizen" && simplifiedText
+                        ? simplifiedText
+                        : selectedLanguage !== "en" && translatedPrediction 
                         ? translatedPrediction 
                         : prediction.prediction}
                     </p>
@@ -757,25 +792,6 @@ Please analyze this modified case and provide a prediction.`;
               <Separator className="my-4" />
               
               <div className="space-y-2">
-                <Button 
-                  variant="outline" 
-                  onClick={handleSimplify}
-                  disabled={isSimplifying}
-                  className="w-full macos-vibrancy"
-                >
-                  {isSimplifying ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Simplifying...
-                    </>
-                  ) : (
-                    <>
-                      <Languages className="h-4 w-4 mr-2" />
-                      Simplify to Plain Language
-                    </>
-                  )}
-                </Button>
-
                 <Sheet>
                   <SheetTrigger asChild>
                     <Button variant="outline" className="w-full macos-vibrancy">
@@ -833,22 +849,6 @@ Please analyze this modified case and provide a prediction.`;
               </div>
             </Card>
           </motion.div>
-
-          {simplifiedText && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-6"
-            >
-              <Card className="macos-card p-6 neon-glow">
-                <div className="flex items-center gap-2 mb-3">
-                  <Languages className="h-5 w-5 text-primary" />
-                  <h4 className="font-medium">Plain Language Explanation</h4>
-                </div>
-                <p className="text-muted-foreground leading-relaxed">{simplifiedText}</p>
-              </Card>
-            </motion.div>
-          )}
 
           <motion.div
             whileHover={{ y: -8, scale: 1.02 }}
