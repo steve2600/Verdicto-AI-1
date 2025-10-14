@@ -37,6 +37,7 @@ export default defineSchema({
     title: v.string(),
     uploadDate: v.number(),
     jurisdiction: v.string(),
+    documentType: v.optional(v.union(v.literal("library"), v.literal("research"))),
     status: v.union(
       v.literal("pending"),
       v.literal("processing"),

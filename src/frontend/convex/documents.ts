@@ -7,6 +7,7 @@ export const create = mutation({
     title: v.string(),
     jurisdiction: v.string(),
     fileId: v.id("_storage"),
+    documentType: v.optional(v.union(v.literal("library"), v.literal("research"))),
     metadata: v.optional(
       v.object({
         documentType: v.string(),
@@ -25,6 +26,7 @@ export const create = mutation({
       title: args.title,
       uploadDate: Date.now(),
       jurisdiction: args.jurisdiction,
+      documentType: args.documentType || "library",
       status: "pending",
       fileId: args.fileId,
       metadata: args.metadata,
@@ -38,6 +40,7 @@ export const list = query({
   args: {
     jurisdiction: v.optional(v.string()),
     status: v.optional(v.string()),
+    documentType: v.optional(v.union(v.literal("library"), v.literal("research"))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -55,6 +58,9 @@ export const list = query({
     }
     if (args.status) {
       filtered = filtered.filter((d) => d.status === args.status);
+    }
+    if (args.documentType) {
+      filtered = filtered.filter((d) => d.documentType === args.documentType);
     }
 
     return filtered.sort((a, b) => b.uploadDate - a.uploadDate);

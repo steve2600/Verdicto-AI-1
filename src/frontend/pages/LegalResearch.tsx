@@ -3,9 +3,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, FileText, Calendar, MapPin, ExternalLink, Loader2, Filter } from "lucide-react";
+import { Search, FileText, Calendar, MapPin, ExternalLink, Loader2, Filter, Upload } from "lucide-react";
 import { useState } from "react";
-import { useQuery, useConvex } from "convex/react";
+import { useQuery, useConvex, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ export default function LegalResearch() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [processingDocuments, setProcessingDocuments] = useState<Set<string>>(new Set());
   
   const navigate = useNavigate();
   const convex = useConvex();
@@ -32,6 +33,10 @@ export default function LegalResearch() {
     jurisdiction: selectedJurisdiction === "all" ? undefined : selectedJurisdiction,
   });
   const jurisdictions = useQuery(api.legalResearch.getJurisdictions, {});
+  
+  const createDocument = useMutation(api.documents.create);
+  const generateUploadUrl = useMutation(api.documents.generateUploadUrl);
+  const processDocumentWithRAG = useAction(api.rag.processDocument);
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
@@ -69,6 +74,106 @@ export default function LegalResearch() {
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const handleBatchUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const fileArray = Array.from(files);
+    
+    // Validate all files first
+    const invalidFiles = fileArray.filter(
+      file => file.type !== "application/pdf" || file.size > 10 * 1024 * 1024
+    );
+
+    if (invalidFiles.length > 0) {
+      toast.error(`${invalidFiles.length} file(s) rejected: Only PDF files under 10MB are supported`);
+      return;
+    }
+
+    toast.info(`Uploading ${fileArray.length} document(s) to Legal Research...`);
+
+    let successCount = 0;
+    let failCount = 0;
+
+    // Process all files in parallel
+    const uploadPromises = fileArray.map(async (file) => {
+      try {
+        // Step 1: Get upload URL from Convex
+        const uploadUrl = await generateUploadUrl();
+
+        // Step 2: Upload file to Convex storage
+        const uploadResponse = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload file");
+        }
+
+        const { storageId } = await uploadResponse.json();
+
+        // Step 3: Create document record with documentType = "research"
+        const documentId = await createDocument({
+          title: file.name.replace(".pdf", ""),
+          jurisdiction: "General",
+          documentType: "research",
+          fileId: storageId,
+          metadata: {
+            documentType: "Legal Research Document",
+            version: "1.0",
+            fileSize: file.size,
+          },
+        });
+
+        // Track this document as processing
+        setProcessingDocuments(prev => new Set(prev).add(documentId));
+
+        // Step 4: Process document with RAG backend (async, don't wait)
+        processDocumentWithRAG({
+          documentId,
+          fileUrl: storageId,
+          title: file.name.replace(".pdf", ""),
+        }).then(() => {
+          setProcessingDocuments(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(documentId);
+            return newSet;
+          });
+        }).catch(err => {
+          console.error(`RAG processing failed for ${file.name}:`, err);
+          setProcessingDocuments(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(documentId);
+            return newSet;
+          });
+        });
+
+        successCount++;
+        return { success: true, fileName: file.name };
+      } catch (error) {
+        console.error(`Upload error for ${file.name}:`, error);
+        failCount++;
+        return { success: false, fileName: file.name, error };
+      }
+    });
+
+    await Promise.all(uploadPromises);
+
+    // Show summary toast
+    if (successCount > 0 && failCount === 0) {
+      toast.success(`All ${successCount} document(s) uploaded successfully! Processing with AI...`);
+    } else if (successCount > 0 && failCount > 0) {
+      toast.warning(`${successCount} document(s) uploaded, ${failCount} failed`);
+    } else {
+      toast.error(`All ${failCount} document(s) failed to upload`);
+    }
+
+    // Reset file input
+    event.target.value = "";
   };
 
   const handleUseInAnalysis = (documentId: string) => {
@@ -110,6 +215,67 @@ export default function LegalResearch() {
           AI-powered semantic search through legal documents
         </p>
       </motion.div>
+
+      {/* Batch Upload Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="mb-6"
+      >
+        <Card className="p-6 border-dashed border-2 hover:border-primary/50 transition-all">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                <Upload className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium mb-1">Upload Research Documents</h3>
+                <p className="text-sm text-muted-foreground">
+                  Add legal documents for AI-powered semantic search (Max 10MB each, multiple files supported)
+                </p>
+              </div>
+            </div>
+            <label htmlFor="research-file-upload" className="cursor-pointer">
+              <Button type="button" className="pointer-events-none">
+                <Upload className="h-4 w-4 mr-2" />
+                Select Files
+              </Button>
+            </label>
+            <input
+              id="research-file-upload"
+              type="file"
+              accept="application/pdf"
+              onChange={handleBatchUpload}
+              className="hidden"
+              multiple
+            />
+          </div>
+        </Card>
+      </motion.div>
+
+      {/* Processing Status Banner */}
+      {processingDocuments.size > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <Card className="p-4 border-blue-500/50 bg-blue-500/10">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+              <div className="flex-1">
+                <p className="font-medium text-blue-400">
+                  Processing {processingDocuments.size} document{processingDocuments.size > 1 ? 's' : ''}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  AI is analyzing and indexing your documents for semantic search...
+                </p>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Statistics Cards - Only show when not searching */}
       {!showResults && (
@@ -155,7 +321,7 @@ export default function LegalResearch() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+        transition={{ delay: 0.15 }}
         className="mb-6"
       >
         <Card className="p-4">
@@ -330,7 +496,7 @@ export default function LegalResearch() {
         >
           <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
           <p className="text-muted-foreground">
-            No legal documents available. Upload documents in the Document Library to get started.
+            No research documents available. Upload documents above to get started.
           </p>
         </motion.div>
       )}
