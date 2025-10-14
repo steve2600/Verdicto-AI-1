@@ -92,7 +92,9 @@ export default function LegalResearch() {
     }
   };
 
-  const displayDocuments = showResults ? searchResults : allDocuments;
+  const displayDocuments = showResults ? searchResults : [];
+  const totalDocuments = allDocuments?.length || 0;
+  const processedDocuments = allDocuments?.filter((d: any) => d.status === 'processed').length || 0;
 
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto">
@@ -108,6 +110,46 @@ export default function LegalResearch() {
           AI-powered semantic search through legal documents
         </p>
       </motion.div>
+
+      {/* Statistics Cards - Only show when not searching */}
+      {!showResults && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
+        >
+          <Card className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Total Documents</p>
+                <p className="text-3xl font-light text-foreground">{totalDocuments}</p>
+              </div>
+              <FileText className="h-10 w-10 text-primary opacity-50" />
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Processed & Ready</p>
+                <p className="text-3xl font-light text-foreground">{processedDocuments}</p>
+              </div>
+              <Search className="h-10 w-10 text-green-500 opacity-50" />
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Jurisdictions</p>
+                <p className="text-3xl font-light text-foreground">{jurisdictions?.length || 0}</p>
+              </div>
+              <MapPin className="h-10 w-10 text-blue-500 opacity-50" />
+            </div>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Search Bar */}
       <motion.div
@@ -251,7 +293,7 @@ export default function LegalResearch() {
         })}
       </div>
 
-      {displayDocuments?.length === 0 && !isSearching && (
+      {displayDocuments?.length === 0 && !isSearching && showResults && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -259,7 +301,36 @@ export default function LegalResearch() {
         >
           <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
           <p className="text-muted-foreground">
-            {showResults ? "No documents found matching your search" : "No legal documents available"}
+            No documents found matching your search
+          </p>
+        </motion.div>
+      )}
+
+      {!showResults && totalDocuments > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-12"
+        >
+          <Search className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+          <p className="text-lg font-medium text-foreground mb-2">
+            Ready to Search
+          </p>
+          <p className="text-muted-foreground">
+            Enter a search term above to find relevant legal documents
+          </p>
+        </motion.div>
+      )}
+
+      {!showResults && totalDocuments === 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-12"
+        >
+          <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+          <p className="text-muted-foreground">
+            No legal documents available. Upload documents in the Document Library to get started.
           </p>
         </motion.div>
       )}
