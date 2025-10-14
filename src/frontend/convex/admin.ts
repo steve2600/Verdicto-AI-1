@@ -7,71 +7,56 @@ export const resetDatabase = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    // Get current user to check if they're an admin
-    const user = await ctx.db.get(userId);
-    
-    // Optional: Add admin check here if needed
-    // if (user?.role !== "admin") throw new Error("Unauthorized");
-
     try {
-      // Delete all user's documents
-      const documents = await ctx.db
+      // Collect all IDs first to avoid reading during deletion
+      const documentIds = (await ctx.db
         .query("documents")
         .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect();
-      
-      for (const doc of documents) {
-        await ctx.db.delete(doc._id);
-      }
+        .collect()).map(d => d._id);
 
-      // Delete all user's queries
-      const queries = await ctx.db
+      const queryIds = (await ctx.db
         .query("queries")
         .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect();
-      
-      for (const query of queries) {
-        await ctx.db.delete(query._id);
-      }
+        .collect()).map(q => q._id);
 
-      // Delete all user's predictions
-      const predictions = await ctx.db
+      const predictionIds = (await ctx.db
         .query("predictions")
         .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect();
-      
-      for (const prediction of predictions) {
-        await ctx.db.delete(prediction._id);
-      }
+        .collect()).map(p => p._id);
 
-      // Delete all user's bias reports
-      const biasReports = await ctx.db
+      const biasReportIds = (await ctx.db
         .query("biasReports")
         .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect();
-      
-      for (const report of biasReports) {
-        await ctx.db.delete(report._id);
-      }
+        .collect()).map(b => b._id);
 
-      // Delete all user's verdict notes
-      const verdictNotes = await ctx.db
+      const verdictNoteIds = (await ctx.db
         .query("verdictNotes")
         .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect();
-      
-      for (const note of verdictNotes) {
-        await ctx.db.delete(note._id);
-      }
+        .collect()).map(v => v._id);
 
-      // Delete all user's document comparisons
-      const comparisons = await ctx.db
+      const comparisonIds = (await ctx.db
         .query("documentComparisons")
         .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect();
-      
-      for (const comparison of comparisons) {
-        await ctx.db.delete(comparison._id);
+        .collect()).map(c => c._id);
+
+      // Now delete all items using the collected IDs
+      for (const id of documentIds) {
+        await ctx.db.delete(id);
+      }
+      for (const id of queryIds) {
+        await ctx.db.delete(id);
+      }
+      for (const id of predictionIds) {
+        await ctx.db.delete(id);
+      }
+      for (const id of biasReportIds) {
+        await ctx.db.delete(id);
+      }
+      for (const id of verdictNoteIds) {
+        await ctx.db.delete(id);
+      }
+      for (const id of comparisonIds) {
+        await ctx.db.delete(id);
       }
 
       return { success: true, message: "Database reset successfully" };
