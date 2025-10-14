@@ -1,248 +1,308 @@
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Mic, MicOff, Trash2, FileText, Sparkles, Loader2, Upload, Scale, CheckCircle2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mic, MicOff, Upload, Loader2, FileText, Sparkles, CheckCircle2 } from "lucide-react";
-import { useMutation, useQuery, useAction } from "convex/react";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { motion } from "framer-motion";
 
 type AnalysisMode = "judge" | "query";
 
 export default function LiveVerdict() {
-  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("judge");
-
-  // Judge Mode states
   const [transcript, setTranscript] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
   const [liveWords, setLiveWords] = useState<string[]>([]);
   const [isRecording, setIsRecording] = useState(false);
-  const recognitionRef = useRef<any>(null);
-
-  // Query Mode state
+  const [recognition, setRecognition] = useState<any>(null);
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("judge");
   const [queryText, setQueryText] = useState("");
-
-  // Document upload/selection states
+  const [uploadedDocs, setUploadedDocs] = useState<File[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<Id<"documents"> | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
 
-  // Analysis states
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [verdictAnalysis, setVerdictAnalysis] = useState<any>(null);
+  const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
 
-  // Convex hooks
-  const documents = useQuery(api.documents.list, { documentType: "library", status: "processed" });
+  const analyzeWithRAG = useAction(api.rag.analyzeQuery);
+  const createQuery = useMutation(api.queries.create);
   const generateUploadUrl = useMutation(api.documents.generateUploadUrl);
   const createDocument = useMutation(api.documents.create);
   const processDocumentWithRAG = useAction(api.rag.processDocument);
-  const analyzeWithRAG = useAction(api.rag.analyzeQuery);
-  const createQuery = useMutation(api.queries.create);
+  const documents = useQuery(api.documents.list, {});
 
-  const stopRecording = () => {
-    try {
-      recognitionRef.current?.stop?.();
-    } catch {
-      // no-op
-    } finally {
-      setIsRecording(false);
-      setLiveWords([]);
-      toast.success("Recording stopped");
-    }
-  };
-
-  const startRecording = () => {
+  const toggleRecording = () => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (isRecording) {
+      recognition?.stop?.();
+      setIsRecording(false);
+      toast.success("Recording stopped");
+      return;
+    }
+
     if (!SpeechRecognition) {
       toast.error("Speech recognition is not supported in your browser");
       return;
     }
-    try {
-      const rec = new SpeechRecognition();
-      recognitionRef.current = rec;
-      rec.continuous = true;
-      rec.interimResults = true;
-      rec.lang = "en-US";
 
-      rec.onstart = () => {
-        setIsRecording(true);
-        setLiveWords([]);
-        toast.success("Recording started");
-      };
+    const rec = new SpeechRecognition();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = "en-US";
 
-      rec.onresult = (event: any) => {
-        let interim = "";
-        let finalized = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const part = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalized += part + " ";
-          } else {
-            interim += part;
-          }
-        }
-        if (finalized) {
-          setTranscript((prev) => prev + finalized);
-          setLiveWords([]);
-        }
-        if (interim) {
-          setLiveWords(interim.trim().split(/\s+/));
+    rec.onstart = () => {
+      setIsRecording(true);
+      setTranscript("");
+      setInterimTranscript("");
+      setLiveWords([]);
+      setVerdictAnalysis(null);
+      toast.success("Recording started");
+    };
+
+    rec.onresult = (event: any) => {
+      let interim = "";
+      let finalized = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const part = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalized += part + " ";
         } else {
-          setLiveWords([]);
+          interim += part;
         }
-      };
+      }
 
-      rec.onerror = (e: any) => {
-        console.error("Speech recognition error:", e?.error);
-        toast.error(`Recording error: ${e?.error || "Unknown"}`);
-        setIsRecording(false);
+      if (finalized) {
+        setTranscript((prev) => prev + finalized);
         setLiveWords([]);
-      };
+      }
 
-      rec.onend = () => {
-        setIsRecording(false);
+      if (interim) {
+        const words = interim.trim().split(/\s+/);
+        setLiveWords(words);
+        setInterimTranscript(interim);
+      } else {
         setLiveWords([]);
-      };
+        setInterimTranscript("");
+      }
+    };
 
-      rec.start();
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to start recording");
-    }
-  };
+    rec.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      toast.error(`Recording error: ${event.error}`);
+      setIsRecording(false);
+    };
 
-  const toggleRecording = () => {
-    if (isRecording) {
-      stopRecording();
-    } else {
-      startRecording();
-    }
+    rec.onend = () => {
+      setIsRecording(false);
+      setInterimTranscript("");
+      setLiveWords([]);
+    };
+
+    setRecognition(rec);
+    rec.start();
   };
 
   const clearTranscript = () => {
     setTranscript("");
+    setInterimTranscript("");
     setLiveWords([]);
+    setVerdictAnalysis(null);
+    setQueryText("");
+    setUploadedDocs([]);
+    toast.success("Cleared");
   };
 
-  const handleFileUpload = async (file: File) => {
-    if (!file) return;
-    
-    setIsUploading(true);
-    try {
-      // Validate file
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error(`${file.name} exceeds 10MB limit`);
-        return;
-      }
-      
-      if (!file.type.includes('pdf') && !file.name.endsWith('.pdf')) {
-        toast.error(`${file.name} is not a PDF file`);
-        return;
-      }
-      
-      toast.info(`Uploading ${file.name}...`);
-      
-      // Step 1: Get upload URL
-      const uploadUrl = await generateUploadUrl();
-      
-      // Step 2: Upload file to Convex storage
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      
-      if (!uploadResponse.ok) {
-        throw new Error(`Failed to upload ${file.name}`);
-      }
-      
-      const { storageId } = await uploadResponse.json();
-      
-      // Step 3: Create document record
-      const documentId = await createDocument({
-        title: file.name,
-        jurisdiction: "General",
-        fileId: storageId,
-        documentType: "library",
-        metadata: {
-          documentType: "legal_document",
-          version: "1.0",
-          fileSize: file.size,
-        },
-      });
-      
-      toast.success(`${file.name} uploaded successfully`);
-      
-      // Step 4: Process with RAG backend
-      toast.info(`Processing ${file.name} with AI...`);
-      await processDocumentWithRAG({
-        documentId,
-        fileUrl: storageId,
-        title: file.name,
-      });
-      
-      toast.success(`${file.name} processed and ready for analysis`);
-      setSelectedDocumentId(documentId);
-      
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error("Failed to upload document. Please try again.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-  const handleAnalyze = async () => {
-    const textToAnalyze = analysisMode === "judge" ? transcript : queryText;
-    
-    if (!textToAnalyze.trim()) {
-      toast.error(`Please enter ${analysisMode === "judge" ? "proceedings" : "a question"}`);
+    const fileArray = Array.from(files);
+    const invalidFiles = fileArray.filter(
+      file => file.type !== "application/pdf" || file.size > 10 * 1024 * 1024
+    );
+
+    if (invalidFiles.length > 0) {
+      toast.error(`${invalidFiles.length} file(s) rejected: Only PDF files under 10MB`);
       return;
     }
 
-    setIsAnalyzing(true);
-    setAnalysisResult(null);
+    toast.info("Uploading documents...");
     
     try {
-      // Create query
-      const queryId = await createQuery({ 
-        queryText: textToAnalyze,
-        uploadedFiles: undefined
-      });
+      for (const file of fileArray) {
+        // Step 1: Get upload URL
+        const uploadUrl = await generateUploadUrl();
+        
+        // Step 2: Upload file to Convex storage
+        const uploadResponse = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        
+        if (!uploadResponse.ok) {
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+        
+        const { storageId } = await uploadResponse.json();
+        
+        // Step 3: Create document record
+        const documentId = await createDocument({
+          title: file.name,
+          jurisdiction: "General",
+          fileId: storageId,
+          metadata: {
+            documentType: "legal_document",
+            version: "1.0",
+            fileSize: file.size,
+          },
+        });
+        
+        toast.success(`${file.name} uploaded successfully`);
+        
+        // Step 4: Process with RAG backend
+        toast.info(`Processing ${file.name} with AI...`);
+        await processDocumentWithRAG({
+          documentId,
+          fileUrl: storageId,
+          title: file.name,
+        });
+        
+        // Auto-select the uploaded document
+        setSelectedDocumentId(documentId);
+        toast.success(`${file.name} processed and selected for analysis`);
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload documents. Please try again.");
+    }
+  };
+
+  const generateVerdictAnalysis = async () => {
+    const textToAnalyze = analysisMode === "judge" ? transcript : queryText;
+    
+    if (!textToAnalyze.trim()) {
+      toast.error(analysisMode === "judge" ? "No transcript available" : "Please enter your question");
+      return;
+    }
+
+    setIsGeneratingAnalysis(true);
+    try {
+      // Create query with mode-specific prompt
+      // In Judge Mode, if a document is selected, use it for context
+      // Otherwise, use Constitution of India and broader knowledge
+      let enhancedPrompt = "";
       
-      // Analyze with RAG backend
-      const result = await analyzeWithRAG({ 
-        queryId, 
-        queryText: textToAnalyze,
+      if (analysisMode === "judge") {
+        enhancedPrompt = `You are an AI legal assistant with comprehensive knowledge of Indian law, the Constitution of India, and access to legal precedents. Analyze the following court proceedings transcript and provide:
+
+**IMPORTANT**: Base your analysis on:
+- The Constitution of India (your primary reference)
+- Indian Penal Code (IPC) and other relevant statutes
+- Landmark Supreme Court and High Court judgments
+- Established legal principles and precedents
+
+1. **Case Type Detection**: Automatically determine if this is a criminal or civil case
+2. **Verdict Determination**: Based on the proceedings and similar Indian legal precedents, determine if the defendant is:
+   - Guilty or Not Guilty (for criminal cases)
+   - Liable or Not Liable (for civil cases)
+3. **Sentencing Recommendation**: If guilty/liable, recommend:
+   - Imprisonment duration with specific IPC sections (for criminal cases)
+   - Compensation/damages with legal basis (for civil cases)
+4. **Legal Basis**: Cite specific:
+   - Articles of the Constitution of India
+   - IPC sections (for criminal cases)
+   - Relevant civil law provisions
+   - Landmark Supreme Court or High Court cases with case names
+
+**Transcript:**
+${textToAnalyze}
+
+**Format your response as:**
+CASE TYPE: [Criminal/Civil]
+VERDICT: [Guilty/Not Guilty or Liable/Not Liable]
+SENTENCING: [Details with legal references]
+LEGAL BASIS: [Constitutional articles, IPC sections, landmark cases]
+CONFIDENCE: [Percentage based on precedents]`;
+      } else {
+        enhancedPrompt = `You are an AI legal assistant with comprehensive knowledge of Indian law, the Constitution of India, and access to legal precedents. A user has asked the following legal question:
+
+**IMPORTANT**: Base your analysis on:
+- The Constitution of India (your primary reference)
+- Indian Penal Code (IPC) and other relevant statutes
+- Landmark Supreme Court and High Court judgments
+- Established legal principles and precedents
+
+**Question:** ${textToAnalyze}
+
+Based on similar cases in Indian legal history and constitutional provisions, provide:
+
+1. **Win Probability**: Calculate the percentage chance of winning this case based on precedents
+2. **Similar Precedents**: List 3-5 similar cases with outcomes and citations
+3. **Legal Strategy**: Recommend the best legal approach based on successful cases
+4. **Relevant Laws**: Cite:
+   - Applicable Constitutional articles
+   - IPC sections or civil law provisions
+   - Landmark cases (with case names and citations)
+5. **Risk Assessment**: Potential challenges and how to address them based on case law
+
+**Format your response as:**
+WIN PROBABILITY: [Percentage]
+SIMILAR CASES: [List with citations]
+LEGAL STRATEGY: [Recommendations]
+RELEVANT LAWS: [Constitutional articles, IPC sections, landmark cases]
+RISK ASSESSMENT: [Details]`;
+      }
+
+      // Create a minimal query record
+      const queryId = await createQuery({
+        queryText: enhancedPrompt,
+      });
+
+      // For both modes, use selected document if available
+      const result = await analyzeWithRAG({
+        queryId,
+        queryText: enhancedPrompt,
         documentIds: selectedDocumentId ? [selectedDocumentId] : undefined,
-        userMode: "lawyer"
+        userMode: "lawyer",
       });
+
+      // Parse the RAG response
+      const response = result.response;
       
-      setAnalysisResult(result);
-      toast.success("Analysis complete!");
+      setVerdictAnalysis({
+        mode: analysisMode,
+        rawResponse: response,
+        confidence: 0.85,
+      });
+
+      toast.success("Analysis complete");
     } catch (error) {
       console.error("Analysis error:", error);
-      toast.error("Analysis failed. Please try again.");
+      toast.error("Failed to generate analysis");
     } finally {
-      setIsAnalyzing(false);
+      setIsGeneratingAnalysis(false);
     }
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
+    <div className="p-4 lg:p-8 max-w-7xl mx-auto pb-20">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-3xl md:text-4xl font-light tracking-tight text-foreground mb-2">
+        <h1 className="text-4xl md:text-5xl font-light mb-2 text-foreground tracking-tight" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300, letterSpacing: '-0.02em' }}>
           Live Verdict
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground font-light" style={{ letterSpacing: '0.01em' }}>
           AI-powered verdict analysis constrained to Indian legal context
         </p>
       </motion.div>
@@ -251,126 +311,67 @@ export default function LiveVerdict() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="flex items-center gap-3 mb-6"
+        transition={{ delay: 0.05 }}
+        className="mb-6"
       >
-        <span className="text-sm text-muted-foreground">Analysis Mode</span>
-        <div className="flex gap-2">
-          <Button
-            variant={analysisMode === "judge" ? "default" : "secondary"}
-            onClick={() => setAnalysisMode("judge")}
-            className="h-8"
-          >
-            Judge Mode
-          </Button>
-          <Button
-            variant={analysisMode === "query" ? "default" : "secondary"}
-            onClick={() => setAnalysisMode("query")}
-            className="h-8"
-          >
-            Query Mode
-          </Button>
-        </div>
-      </motion.div>
-
-      {/* Document Upload/Selection Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <Card className="macos-card p-6 mb-6">
-          <h3 className="text-lg font-medium mb-4">Upload Case Documents (Optional)</h3>
-          <div className="flex items-center gap-3 flex-wrap">
-            <Button
-              variant="outline"
-              className="macos-vibrancy"
-              disabled={isUploading}
-              onClick={() => {
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.pdf';
-                input.onchange = async (e: any) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    await handleFileUpload(file);
-                  }
-                };
-                input.click();
-              }}
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload Document
-                </>
-              )}
-            </Button>
-
-            <div className="flex-1 min-w-[200px]">
-              <Select 
-                value={selectedDocumentId || "none"} 
-                onValueChange={(val) => {
-                  if (val === "none") {
-                    setSelectedDocumentId(null);
-                  } else {
-                    setSelectedDocumentId(val as Id<"documents">);
-                  }
-                }}
-              >
-                <SelectTrigger className="w-full macos-vibrancy">
-                  <FileText className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Select processed document or use Constitution of India" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Use Constitution of India (default)</SelectItem>
-                  {documents?.map((doc: any) => (
-                    <SelectItem key={doc._id} value={doc._id}>
-                      {doc.title} ({doc.jurisdiction})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <Card className="macos-card p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Scale className="h-5 w-5 text-primary" />
+              <span className="font-medium">Analysis Mode</span>
             </div>
-
-            {selectedDocumentId && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" />
-                Document selected
-              </Badge>
-            )}
+            <div className="flex gap-2">
+              <Button
+                variant={analysisMode === "judge" ? "default" : "outline"}
+                onClick={() => setAnalysisMode("judge")}
+                className="neon-glow"
+              >
+                Judge Mode
+              </Button>
+              <Button
+                variant={analysisMode === "query" ? "default" : "outline"}
+                onClick={() => setAnalysisMode("query")}
+                className="neon-glow"
+              >
+                Query Mode
+              </Button>
+            </div>
           </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            {analysisMode === "judge" 
+              ? "Analyze court proceedings and determine verdict based on Indian law"
+              : "Ask specific legal questions and get win probability with precedents"}
+          </p>
         </Card>
       </motion.div>
 
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left: Live Transcript / Query Input */}
+        {/* Input Section */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.1 }}
         >
-          <Card className="macos-card p-6">
+          <Card className="macos-card p-6 neon-glow">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium text-foreground">
-                {analysisMode === "judge" ? "Live Transcript" : "Question"}
-              </h2>
-              {analysisMode === "judge" && (
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center neon-glow">
+                  <FileText className="h-5 w-5 text-primary" />
+                </div>
+                <h2 className="text-xl font-medium text-foreground">
+                  {analysisMode === "judge" ? "Live Transcript" : "Legal Query"}
+                </h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {analysisMode === "judge" && (
                   <Button
-                    variant="secondary"
                     onClick={toggleRecording}
-                    className="h-8"
+                    variant={isRecording ? "destructive" : "default"}
+                    className={isRecording ? "neon-glow animate-pulse" : "neon-glow"}
                   >
                     {isRecording ? (
                       <>
-                        <MicOff className="h-4 w-4 mr-2 animate-pulse text-red-500" />
+                        <MicOff className="h-4 w-4 mr-2" />
                         Stop Proceeding
                       </>
                     ) : (
@@ -380,149 +381,210 @@ export default function LiveVerdict() {
                       </>
                     )}
                   </Button>
-                  <Button variant="secondary" onClick={clearTranscript} className="h-8">
-                    Clear
+                )}
+                <Button
+                  onClick={clearTranscript}
+                  variant="outline"
+                  className="macos-vibrancy"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear
+                </Button>
+              </div>
+            </div>
+
+            <Separator className="my-4" />
+
+            <div className="mb-4 space-y-3">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Upload Case Documents (Optional)</label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    className="macos-vibrancy"
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = '.pdf';
+                      input.multiple = false;
+                      input.onchange = (e) => handleFileUpload(e as unknown as React.ChangeEvent<HTMLInputElement>);
+                      input.click();
+                    }}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Document
                   </Button>
+                  
+                  {documents && documents.filter((d: any) => d.status === "processed").length > 0 && (
+                    <Select 
+                      value={selectedDocumentId || "none"} 
+                      onValueChange={(val: string) => {
+                        if (val === "none") {
+                          setSelectedDocumentId(null);
+                        } else {
+                          setSelectedDocumentId(val as Id<"documents">);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-[300px] macos-vibrancy">
+                        <FileText className="h-4 w-4 mr-2" />
+                        <SelectValue placeholder="Or select existing document" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Use Constitution of India</SelectItem>
+                        {documents?.filter((doc: any) => doc.status === "processed").map((doc: any) => (
+                          <SelectItem key={doc._id} value={doc._id}>
+                            {doc.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
-              )}
+                {selectedDocumentId && (
+                  <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    Document selected for analysis
+                  </p>
+                )}
+              </div>
             </div>
 
             {analysisMode === "judge" ? (
-              <div className="space-y-2">
-                <Textarea
-                  placeholder="Type your court proceedings here or use voice transcription..."
-                  className="min-h-[400px] max-h-[600px] resize-none font-light macos-vibrancy"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
-                  value={transcript + (liveWords.length > 0 ? " " + liveWords.join(" ") : "")}
-                  onChange={(e) => setTranscript(e.target.value)}
-                />
-                {liveWords.length > 0 && (
-                  <div className="text-xs text-muted-foreground italic">
-                    Live transcription in progress...
+              <div className="min-h-[400px] max-h-[600px] overflow-y-auto p-4 rounded-lg macos-vibrancy border border-border">
+                {transcript || liveWords.length > 0 ? (
+                  <div className="text-foreground whitespace-pre-wrap leading-relaxed font-light" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    <span>{transcript}</span>
+                    {liveWords.length > 0 && (
+                      <span className="inline-flex flex-wrap gap-1">
+                        {liveWords.map((word, idx) => (
+                          <motion.span
+                            key={`${idx}-${word}`}
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.15, delay: idx * 0.05 }}
+                            className="text-primary italic font-medium"
+                          >
+                            {word}
+                          </motion.span>
+                        ))}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 neon-glow">
+                      <Mic className="h-8 w-8 text-primary" />
+                    </div>
+                    <p className="text-muted-foreground font-light">
+                      Click "Start Proceeding" to begin transcription...
+                    </p>
                   </div>
                 )}
               </div>
             ) : (
-              <Textarea
-                placeholder="Enter your legal question (e.g., 'What is the chance of winning this case about land acquisition?')"
-                className="min-h-[400px] max-h-[600px] resize-none font-light macos-vibrancy"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-                value={queryText}
-                onChange={(e) => setQueryText(e.target.value)}
-              />
-            )}
-
-            <Separator className="my-4" />
-
-            <div className="flex gap-2">
-              <Button
-                onClick={handleAnalyze}
-                disabled={isAnalyzing || (analysisMode === "judge" ? !transcript.trim() : !queryText.trim())}
-                className="flex-1 neon-glow"
-              >
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Analyze
-                  </>
-                )}
-              </Button>
-
-              {analysisResult && analysisMode === "judge" && (
-                <Button
-                  onClick={handleAnalyze}
-                  disabled={isAnalyzing}
-                  variant="outline"
-                  className="macos-vibrancy"
-                >
-                  Reanalyze
-                </Button>
-              )}
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Right: AI Analysis Results */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="macos-card p-6">
-            <h2 className="text-lg font-medium text-foreground mb-4">AI Analysis</h2>
-            
-            {isAnalyzing && (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground">Analyzing with AI...</p>
-              </div>
-            )}
-
-            {!isAnalyzing && !analysisResult && (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                  <Sparkles className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">Ready to Analyze</h3>
-                <p className="text-sm text-muted-foreground">
-                  {analysisMode === "judge" 
-                    ? "Enter proceedings and click Analyze to get AI verdict determination"
-                    : "Enter your legal question and click Analyze to get AI insights"}
-                </p>
-              </div>
-            )}
-
-            {analysisResult && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-4"
-              >
-                <div className="macos-vibrancy p-4 rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium">
-                      {analysisMode === "judge" ? "Verdict Determination" : "Analysis Result"}
-                    </h3>
-                    {analysisResult.confidenceScore && (
-                      <Badge variant="secondary">
-                        {Math.round(analysisResult.confidenceScore * 100)}% confidence
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                    {analysisResult.prediction || analysisResult.answer || analysisResult.response || "No verdict available"}
-                  </p>
-                </div>
-
-                {analysisResult.reasoning && (
-                  <div className="macos-vibrancy p-4 rounded-lg">
-                    <h4 className="font-medium mb-2">Legal Reasoning</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {analysisResult.reasoning}
+              <div className="space-y-4">
+                <Textarea
+                  placeholder="Enter your legal question (e.g., 'I am a poor farmer and the government wants to take my land. What is the probability of winning if I file a case?')"
+                  value={queryText}
+                  onChange={(e) => setQueryText(e.target.value)}
+                  className="min-h-[300px] macos-vibrancy"
+                />
+                
+                {!selectedDocumentId && (
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                    <p className="text-sm text-blue-400 flex items-center gap-2">
+                      <Scale className="h-4 w-4" />
+                      Analysis based on the Constitution of India and established legal precedents
                     </p>
                   </div>
                 )}
-
-                {analysisResult.bulletPoints && analysisResult.bulletPoints.length > 0 && (
-                  <div className="macos-vibrancy p-4 rounded-lg">
-                    <h4 className="font-medium mb-2">Key Points</h4>
-                    <ul className="space-y-2">
-                      {analysisResult.bulletPoints.map((point: string, idx: number) => (
-                        <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                          <span>{point}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </motion.div>
+              </div>
             )}
+          </Card>
+        </motion.div>
+
+        {/* Analysis Section */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="macos-card p-6 neon-glow">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center neon-glow">
+                <Sparkles className="h-5 w-5 text-primary" />
+              </div>
+              <h2 className="text-xl font-medium text-foreground">AI Analysis</h2>
+            </div>
+
+            <Separator className="my-4" />
+
+            <div className="min-h-[400px] p-4 rounded-lg macos-vibrancy border border-border space-y-4">
+              {verdictAnalysis ? (
+                <div className="space-y-4">
+                  <div className="bg-primary/10 p-4 rounded-lg border border-primary/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge variant="secondary" className="mb-2">
+                        {verdictAnalysis.mode === "judge" ? "Judge Mode Analysis" : "Query Mode Analysis"}
+                      </Badge>
+                      <Button
+                        onClick={generateVerdictAnalysis}
+                        disabled={isGeneratingAnalysis}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                      >
+                        {isGeneratingAnalysis ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Reanalyzing...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4" />
+                            Reanalyze
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                      {verdictAnalysis.rawResponse}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 neon-glow">
+                    <Sparkles className="h-8 w-8 text-primary" />
+                  </div>
+                  <p className="text-muted-foreground font-light mb-4">
+                    {analysisMode === "judge" 
+                      ? "Record proceedings and click Analyze to get AI verdict"
+                      : "Enter your question and click Analyze to get win probability"}
+                  </p>
+                  {((analysisMode === "judge" && transcript) || (analysisMode === "query" && queryText)) && (
+                    <Button
+                      onClick={generateVerdictAnalysis}
+                      disabled={isGeneratingAnalysis}
+                      className="neon-glow"
+                    >
+                      {isGeneratingAnalysis ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Analyzing with AI...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Analyze
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           </Card>
         </motion.div>
       </div>
