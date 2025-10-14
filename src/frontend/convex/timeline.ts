@@ -204,16 +204,43 @@ function parseTimelineEvents(response: string): any[] {
   for (const line of lines) {
     const trimmed = line.trim();
     
+    // Skip empty lines and JSON structure markers
+    if (!trimmed || trimmed === '{' || trimmed === '}' || trimmed === '[' || trimmed === ']' || trimmed === ',') {
+      continue;
+    }
+    
     // Look for date patterns
     const dateMatch = trimmed.match(/(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})/);
     if (dateMatch) {
       if (currentEvent) events.push(currentEvent);
+      
+      // Extract clean description by removing JSON formatting
+      let cleanDescription = trimmed;
+      
+      // Remove JSON key-value patterns like "date": "2000-12-01",
+      cleanDescription = cleanDescription.replace(/"date":\s*"[^"]*",?\s*/gi, '');
+      cleanDescription = cleanDescription.replace(/"eventType":\s*"[^"]*",?\s*/gi, '');
+      cleanDescription = cleanDescription.replace(/"importance":\s*"[^"]*",?\s*/gi, '');
+      cleanDescription = cleanDescription.replace(/"page":\s*\d+,?\s*/gi, '');
+      
+      // Extract excerpt content if present
+      const excerptMatch = trimmed.match(/"excerpt":\s*"([^"]*)"/i);
+      const excerpt = excerptMatch ? excerptMatch[1] : trimmed;
+      
+      // If we have an excerpt, use it as the description
+      if (excerptMatch && excerptMatch[1].length > 10) {
+        cleanDescription = excerptMatch[1];
+      } else {
+        // Otherwise, clean up remaining JSON artifacts
+        cleanDescription = cleanDescription.replace(/["{},]/g, '').trim();
+      }
+      
       currentEvent = {
         date: dateMatch[1],
         eventType: "other",
-        description: trimmed,
+        description: cleanDescription || "Event on " + dateMatch[1],
         importance: "medium",
-        sourceReference: { page: 1, excerpt: trimmed },
+        sourceReference: { page: 1, excerpt: excerpt },
       };
     }
 
