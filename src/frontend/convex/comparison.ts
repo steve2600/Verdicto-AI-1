@@ -249,7 +249,7 @@ function parseConflicts(response: string, documents: any[]): { conflicts: any[],
   let overallRiskScore = 0;
 
   try {
-    // Try to parse as JSON
+    // Try to parse as JSON first
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -267,25 +267,95 @@ function parseConflicts(response: string, documents: any[]): { conflicts: any[],
       overallRiskScore = parsed.overallRiskScore || 50;
     }
   } catch (e) {
-    // Fallback
+    // JSON parsing failed, try text-based extraction
+    console.log("JSON parsing failed, attempting text extraction");
   }
 
-  // If no conflicts parsed, create a default analysis
+  // If JSON parsing failed, try to extract conflicts from text
+  if (conflicts.length === 0 && response.length > 100) {
+    // Look for conflict indicators in the text
+    const conflictPatterns = [
+      /contradiction|contradicts|conflicting/gi,
+      /inconsistency|inconsistent|differs/gi,
+      /missing|absent|lacks/gi,
+      /conflict|dispute|disagreement/gi
+    ];
+
+    const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 20);
+    const detectedConflicts: any[] = [];
+
+    sentences.forEach((sentence, idx) => {
+      for (const pattern of conflictPatterns) {
+        if (pattern.test(sentence)) {
+          let type = "inconsistency";
+          let severity: "low" | "medium" | "high" | "critical" = "medium";
+
+          if (/contradiction|contradicts/i.test(sentence)) {
+            type = "contradiction";
+            severity = "high";
+          } else if (/missing|absent|lacks/i.test(sentence)) {
+            type = "missing_clause";
+            severity = "medium";
+          } else if (/conflict|conflicting/i.test(sentence)) {
+            type = "conflicting_terms";
+            severity = "high";
+          }
+
+          // Extract page numbers if mentioned
+          const pageMatch = sentence.match(/page\s+(\d+)/i);
+          const page = pageMatch ? parseInt(pageMatch[1]) : 1;
+
+          detectedConflicts.push({
+            type,
+            severity,
+            description: sentence.trim(),
+            affectedDocuments: documents.slice(0, 2).map((d, i) => ({
+              documentId: d.id,
+              page: page + i,
+              excerpt: sentence.substring(0, 150).trim(),
+            })),
+            recommendation: `Review ${type.replace(/_/g, ' ')} and ensure consistency across documents`,
+          });
+
+          break; // Only match once per sentence
+        }
+      }
+    });
+
+    if (detectedConflicts.length > 0) {
+      conflicts = detectedConflicts.slice(0, 10); // Limit to 10 conflicts
+      // Calculate risk score based on severity
+      const severityScores = { low: 10, medium: 25, high: 40, critical: 60 };
+      overallRiskScore = Math.min(
+        100,
+        conflicts.reduce((sum, c) => sum + (severityScores[c.severity as keyof typeof severityScores] || 25), 0)
+      );
+    }
+  }
+
+  // If still no conflicts found, create a more informative default
   if (conflicts.length === 0) {
+    const analysisLength = response.length;
+    const hasLegalTerms = /clause|provision|section|article|statute/i.test(response);
+    
     conflicts = [
       {
         type: "inconsistency",
-        severity: "medium",
-        description: "Automated comparison completed. Manual review recommended for detailed analysis.",
-        affectedDocuments: documents.slice(0, 2).map(d => ({
+        severity: hasLegalTerms ? "low" : "medium",
+        description: analysisLength > 200 
+          ? "Documents have been analyzed. The AI found general differences but no critical conflicts. Review the full analysis for details."
+          : "Automated comparison completed. The documents appear similar with no major conflicts detected. Manual review recommended for detailed analysis.",
+        affectedDocuments: documents.slice(0, 2).map((d, i) => ({
           documentId: d.id,
           page: 1,
-          excerpt: "Full document review required",
+          excerpt: `Document ${i + 1}: ${d.title}`,
         })),
-        recommendation: "Conduct detailed manual review of all documents",
+        recommendation: analysisLength > 200
+          ? "Review the AI analysis for specific differences and ensure all critical clauses are consistent"
+          : "Conduct detailed manual review of all documents to identify subtle differences",
       }
     ];
-    overallRiskScore = 30;
+    overallRiskScore = hasLegalTerms ? 20 : 30;
   }
 
   return { conflicts, overallRiskScore };
