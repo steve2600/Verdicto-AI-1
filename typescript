@@ -1,2 +1,1 @@
-const results = await convex.action(api.legalResearch.semanticSearch, {
-
+setTranscript((prev) => prev + finalTranscript + interimTranscript);
