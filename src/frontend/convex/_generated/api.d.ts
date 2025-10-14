@@ -22,6 +22,8 @@ import type * as documents from "../documents.js";
 import type * as hackathonFeatures from "../hackathonFeatures.js";
 import type * as http from "../http.js";
 import type * as legalResearch from "../legalResearch.js";
+import type * as legalResearchActions from "../legalResearchActions.js";
+import type * as legalResearchHelpers from "../legalResearchHelpers.js";
 import type * as mlBiasAnalysis from "../mlBiasAnalysis.js";
 import type * as predictions from "../predictions.js";
 import type * as queries from "../queries.js";
@@ -49,6 +51,8 @@ declare const fullApi: ApiFromModules<{
   hackathonFeatures: typeof hackathonFeatures;
   http: typeof http;
   legalResearch: typeof legalResearch;
+  legalResearchActions: typeof legalResearchActions;
+  legalResearchHelpers: typeof legalResearchHelpers;
   mlBiasAnalysis: typeof mlBiasAnalysis;
   predictions: typeof predictions;
   queries: typeof queries;

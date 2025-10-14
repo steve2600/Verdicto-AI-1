@@ -50,7 +50,7 @@ export default function BiasInsights() {
 
     const averages: Record<string, number> = {};
     categories.forEach(category => {
-      const sum = predictions.reduce((acc, p) => {
+      const sum = predictions.reduce((acc: number, p: any) => {
         const biasFlag = (p.biasFlags || []).find((f: any) => 
           f.type.toLowerCase().replace(/\s+/g, '_') === category
         );

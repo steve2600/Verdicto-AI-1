@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, FileText, Calendar, MapPin, ExternalLink, Loader2, Filter } from "lucide-react";
 import { useState } from "react";
-import { useQuery, useAction, useConvex } from "convex/react";
+import { useQuery, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
@@ -27,17 +27,11 @@ export default function LegalResearch() {
   
   const navigate = useNavigate();
   const convex = useConvex();
-  const semanticSearch = useAction(api.legalResearch.semanticSearch);
+
   const allDocuments = useQuery(api.legalResearch.listProcessedDocuments, {
     jurisdiction: selectedJurisdiction === "all" ? undefined : selectedJurisdiction,
   });
   const jurisdictions = useQuery(api.legalResearch.getJurisdictions, {});
-  const getFileUrl = useQuery(
-    api.documents.getFileUrl,
-    searchResults.length > 0 && searchResults[0]?.document?.fileId
-      ? { storageId: searchResults[0].document.fileId }
-      : "skip"
-  );
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
@@ -48,22 +42,42 @@ export default function LegalResearch() {
     setIsSearching(true);
     setShowResults(true);
     try {
-      const results = await semanticSearch({
-        query: searchTerm,
-        limit: 20,
-      });
-      setSearchResults(results);
-      
-      if (results.length === 0) {
+      const term = searchTerm.trim();
+
+      // Title/metadata search via Convex (fast and reliable for headings)
+      const titleMatches: any[] = await convex.query(
+        api.legalResearch.searchByTitleInternal,
+        { query: term }
+      );
+      // Respect selected jurisdiction filter
+      const filtered = selectedJurisdiction === "all"
+        ? titleMatches
+        : (titleMatches || []).filter((m: any) => m.document?.jurisdiction === selectedJurisdiction);
+
+      setSearchResults(filtered);
+
+      if ((filtered || []).length === 0) {
         toast.info("No documents found matching your search");
       } else {
-        toast.success(`Found ${results.length} relevant documents`);
+        toast.success(`Found ${filtered.length} relevant document${filtered.length > 1 ? "s" : ""}`);
       }
     } catch (error) {
       console.error("Search error:", error);
-      toast.error("Search failed. Please check your connection and try again.");
-      setSearchResults([]);
-      setShowResults(false);
+
+      // Fallback: try local title matches only
+      const lower = searchTerm.trim().toLowerCase();
+      const localOnly: any[] = (allDocuments || []).filter((d: any) => {
+        const inTitle = (d.title || "").toLowerCase().includes(lower);
+        const jurisdictionOk = selectedJurisdiction === "all" ? true : d.jurisdiction === selectedJurisdiction;
+        return inTitle && jurisdictionOk;
+      });
+      setSearchResults(localOnly);
+      if (localOnly.length > 0) {
+        toast.success(`Found ${localOnly.length} document${localOnly.length > 1 ? "s" : ""} by title`);
+      } else {
+        toast.error("Search failed. Please try again.");
+        setShowResults(false);
+      }
     } finally {
       setIsSearching(false);
     }
@@ -150,7 +164,7 @@ export default function LegalResearch() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Jurisdictions</SelectItem>
-                  {jurisdictions?.map((jurisdiction) => (
+                  {jurisdictions?.map((jurisdiction: string) => (
                     <SelectItem key={jurisdiction} value={jurisdiction}>
                       {jurisdiction}
                     </SelectItem>
