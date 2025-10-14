@@ -168,6 +168,7 @@ export const analyzeQuery = action({
     queryId: v.id("queries"),
     queryText: v.string(),
     documentIds: v.optional(v.array(v.id("documents"))),
+    userMode: v.optional(v.string()), // "citizen" or "lawyer"
   },
   handler: async (ctx, args): Promise<{ success: boolean; predictionId: any; response: string }> => {
     try {
@@ -183,6 +184,33 @@ export const analyzeQuery = action({
         documentId = args.documentIds[0];
       }
 
+      // Build mode-specific prompt
+      let enhancedQuery = args.queryText;
+      
+      if (args.userMode === "citizen") {
+        // Citizen Mode: Simple, plain language with strict constraints
+        enhancedQuery = `${args.queryText}
+
+IMPORTANT: Provide your response in CITIZEN MODE following these strict rules:
+1. Use ONLY 2 sentences maximum
+2. Use simple, everyday language that anyone can understand
+3. Avoid ALL legal jargon and technical terms
+4. Minimize or avoid numbers and percentages
+5. Explain like you're talking to someone with no legal background
+6. Be direct and clear about the likely outcome`;
+      } else {
+        // Lawyer Mode: Technical, detailed legal analysis
+        enhancedQuery = `${args.queryText}
+
+IMPORTANT: Provide your response in LAWYER MODE following these guidelines:
+1. Use precise legal terminology and cite relevant laws/sections
+2. Provide detailed legal reasoning with multiple factors
+3. Include specific legal precedents and case references where applicable
+4. Use technical language appropriate for legal professionals
+5. Provide comprehensive analysis with supporting evidence
+6. Include confidence indicators based on legal precedents`;
+      }
+
       // Send to RAG backend for analysis using dedicated query endpoint
       const response = await fetch(`${RAG_BACKEND_URL}/api/v1/documents/query`, {
         method: "POST",
@@ -191,7 +219,7 @@ export const analyzeQuery = action({
           "Authorization": "Bearer 8ad62148045cbf8137a66e1d8c0974e14f62a970b4fa91afb850f461abfbadb8",
         },
         body: JSON.stringify({
-          query: args.queryText,
+          query: enhancedQuery,
           document_id: documentId,
         }),
       });
@@ -207,34 +235,30 @@ export const analyzeQuery = action({
       const ragSources = result.sources || [];
       
       // Calculate dynamic confidence based on response quality
-      // Factors: response length, presence of specific legal terms, structure
       let confidence = 0.5; // Base confidence
       
       if (ragResponse && ragResponse.length > 100) {
-        confidence += 0.1; // Longer, more detailed responses
+        confidence += 0.1;
       }
       if (ragResponse && ragResponse.length > 300) {
-        confidence += 0.1; // Very detailed responses
+        confidence += 0.1;
       }
       
-      // Check for legal terminology and structure
       const legalTerms = ['section', 'act', 'court', 'case', 'law', 'legal', 'pursuant', 'hereby', 'whereas'];
       const termsFound = legalTerms.filter(term => 
         ragResponse.toLowerCase().includes(term)
       ).length;
       
       if (termsFound >= 3) {
-        confidence += 0.15; // Contains multiple legal terms
+        confidence += 0.15;
       } else if (termsFound >= 1) {
-        confidence += 0.05; // Contains some legal terms
+        confidence += 0.05;
       }
       
-      // Boost confidence if we have source references
       if (ragSources.length > 0) {
         confidence += 0.1;
       }
       
-      // Cap confidence at 0.95 (never 100% certain)
       confidence = Math.min(confidence, 0.95);
 
       // Create prediction in Convex with RAG results
