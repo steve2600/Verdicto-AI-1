@@ -370,20 +370,22 @@ async def query_documents(
                 llm = get_llm()
                 context_text = "\n\n".join(context_chunks[:3])  # Use top 3 chunks
                 
-                prompt = f"""Based on the following legal document context, provide a structured legal analysis in the following format:
-
-CASE TYPE: [Identify the type of case - Criminal/Civil/Constitutional]
-VERDICT: [State the verdict - Guilty/Not Guilty/Liable/Not Liable/etc.]
-SENTENCING: [Provide detailed sentencing or remedies with specific legal provisions and sections]
-LEGAL BASIS: [Explain the legal reasoning with relevant articles, sections, and landmark case precedents]
-CONFIDENCE: [Provide confidence percentage with supporting case references]
+                prompt = f"""You are a legal expert analyzing a specific case. Based on the legal document context provided, deliver a direct verdict and analysis for this case.
 
 Context from legal documents:
 {context_text}
 
-Question: {request.query}
+Case Query: {request.query}
 
-Provide a comprehensive structured analysis following the exact format above."""
+Provide your analysis in this exact format:
+
+CASE TYPE: [Identify the specific type - Criminal/Civil/Constitutional]
+VERDICT: [State the direct verdict - Guilty/Not Guilty/Liable/Not Liable/Convicted/Acquitted]
+SENTENCING: [Provide specific sentencing with exact legal provisions, sections, and imprisonment duration. For criminal cases, specify IPC sections and punishment duration]
+LEGAL BASIS: [Explain the legal reasoning with relevant Constitutional articles, IPC sections, and landmark Supreme Court precedents like Machhi Singh v. State of Punjab (1983)]
+CONFIDENCE: [Provide confidence percentage based on precedents and legal provisions cited]
+
+Analyze the specific case scenario presented and provide a direct verdict with detailed legal justification."""
                 
                 answer = llm.invoke(prompt).content
                 
@@ -412,23 +414,25 @@ Provide a comprehensive structured analysis following the exact format above."""
             # Using Constitution of India and broader legal knowledge
             llm = get_llm()
             
-            prompt = f"""You are an AI legal assistant with comprehensive knowledge of Indian law and the Constitution of India.
+            prompt = f"""You are a legal expert delivering a verdict for a specific case based on Indian law.
 
-Question: {request.query}
+Case Query: {request.query}
 
-Provide a structured legal analysis in the following format:
+Analyze this case and provide your verdict in this exact format:
 
-CASE TYPE: [Identify the type of case - Criminal/Civil/Constitutional]
-VERDICT: [State the verdict - Guilty/Not Guilty/Liable/Not Liable/etc.]
-SENTENCING: [Provide detailed sentencing or remedies with specific legal provisions and sections]
-LEGAL BASIS: [Explain the legal reasoning with relevant articles, sections, and landmark case precedents from Indian law]
-CONFIDENCE: [Provide confidence percentage with supporting case references from Indian Supreme Court and High Courts]
+CASE TYPE: [Identify the specific type - Criminal/Civil/Constitutional]
+VERDICT: [State the direct verdict - Guilty/Not Guilty/Liable/Not Liable/Convicted/Acquitted]
+SENTENCING: [Provide specific sentencing with exact IPC sections and punishment duration. For murder cases, cite Section 302 IPC and specify imprisonment duration]
+LEGAL BASIS: [Explain with specific Constitutional articles (e.g., Article 21), IPC sections (e.g., Section 302, 300, 299), and landmark cases like Machhi Singh v. State of Punjab (1983), Bachan Singh v. State of Punjab (1980)]
+CONFIDENCE: [Provide confidence percentage based on the precedents and legal provisions cited]
 
-Base your analysis on:
-- The Constitution of India
-- Indian Penal Code (IPC) and relevant statutes
-- Landmark Supreme Court and High Court judgments
-- Established legal principles and precedents"""
+Base your verdict on:
+- Constitution of India (especially Article 21 - Right to Life)
+- Indian Penal Code sections for the specific offense
+- Landmark Supreme Court judgments
+- Established sentencing guidelines
+
+Provide a direct, specific verdict for the case scenario presented."""
             
             answer = llm.invoke(prompt).content
             
