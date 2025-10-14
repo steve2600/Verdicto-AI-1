@@ -3,11 +3,12 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Trash2, FileText, Sparkles, Loader2, Upload, Scale } from "lucide-react";
+import { Mic, MicOff, Trash2, FileText, Sparkles, Loader2, Upload, Scale, CheckCircle2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 
@@ -22,6 +23,7 @@ export default function LiveVerdict() {
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("judge");
   const [queryText, setQueryText] = useState("");
   const [uploadedDocs, setUploadedDocs] = useState<File[]>([]);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<Id<"documents"> | null>(null);
 
   const [verdictAnalysis, setVerdictAnalysis] = useState<any>(null);
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
@@ -31,6 +33,7 @@ export default function LiveVerdict() {
   const generateUploadUrl = useMutation(api.documents.generateUploadUrl);
   const createDocument = useMutation(api.documents.create);
   const processDocumentWithRAG = useAction(api.rag.processDocument);
+  const documents = useQuery(api.documents.list, {});
 
   const toggleRecording = () => {
     const SpeechRecognition =
@@ -130,8 +133,56 @@ export default function LiveVerdict() {
       return;
     }
 
-    setUploadedDocs(prev => [...prev, ...fileArray]);
-    toast.success(`${fileArray.length} document(s) added`);
+    toast.info("Uploading documents...");
+    
+    try {
+      for (const file of fileArray) {
+        // Step 1: Get upload URL
+        const uploadUrl = await generateUploadUrl();
+        
+        // Step 2: Upload file to Convex storage
+        const uploadResponse = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        
+        if (!uploadResponse.ok) {
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+        
+        const { storageId } = await uploadResponse.json();
+        
+        // Step 3: Create document record
+        const documentId = await createDocument({
+          title: file.name,
+          jurisdiction: "General",
+          fileId: storageId,
+          metadata: {
+            documentType: "legal_document",
+            version: "1.0",
+            fileSize: file.size,
+          },
+        });
+        
+        toast.success(`${file.name} uploaded successfully`);
+        
+        // Step 4: Process with RAG backend
+        toast.info(`Processing ${file.name} with AI...`);
+        await processDocumentWithRAG({
+          documentId,
+          fileUrl: storageId,
+          title: file.name,
+        });
+        
+        // Auto-select the uploaded document
+        setSelectedDocumentId(documentId);
+        toast.success(`${file.name} processed and selected for analysis`);
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload documents. Please try again.");
+    }
   };
 
   const generateVerdictAnalysis = async () => {
@@ -144,10 +195,9 @@ export default function LiveVerdict() {
 
     setIsGeneratingAnalysis(true);
     try {
-      // For Live Verdict, we DON'T require document uploads
-      // The LLM uses the Constitution of India and its broader legal knowledge
-      
       // Create query with mode-specific prompt
+      // In Judge Mode, if a document is selected, use it for context
+      // Otherwise, use Constitution of India and broader knowledge
       let enhancedPrompt = "";
       
       if (analysisMode === "judge") {
@@ -216,12 +266,12 @@ RISK ASSESSMENT: [Details]`;
         queryText: enhancedPrompt,
       });
 
-      // For Live Verdict, we explicitly pass NO documentIds
-      // This allows the RAG backend to use its full knowledge base
+      // For Judge Mode, use selected document if available
+      // For Query Mode, always use broader knowledge base
       const result = await analyzeWithRAG({
         queryId,
         queryText: enhancedPrompt,
-        documentIds: undefined, // No document restriction for Live Verdict
+        documentIds: analysisMode === "judge" && selectedDocumentId ? [selectedDocumentId] : undefined,
         userMode: "lawyer",
       });
 
@@ -345,6 +395,63 @@ RISK ASSESSMENT: [Details]`;
             </div>
 
             <Separator className="my-4" />
+
+            {analysisMode === "judge" && (
+              <div className="mb-4 space-y-3">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Upload Case Documents (Optional)</label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="macos-vibrancy"
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.pdf';
+                        input.multiple = false;
+                        input.onchange = (e) => handleFileUpload(e as unknown as React.ChangeEvent<HTMLInputElement>);
+                        input.click();
+                      }}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Document
+                    </Button>
+                    
+                    {documents && documents.filter((d: any) => d.status === "processed").length > 0 && (
+                      <Select 
+                        value={selectedDocumentId || "none"} 
+                        onValueChange={(val: string) => {
+                          if (val === "none") {
+                            setSelectedDocumentId(null);
+                          } else {
+                            setSelectedDocumentId(val as Id<"documents">);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-[300px] macos-vibrancy">
+                          <FileText className="h-4 w-4 mr-2" />
+                          <SelectValue placeholder="Or select existing document" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Use Constitution of India</SelectItem>
+                          {documents?.filter((doc: any) => doc.status === "processed").map((doc: any) => (
+                            <SelectItem key={doc._id} value={doc._id}>
+                              {doc.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                  {selectedDocumentId && (
+                    <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                      Document selected for analysis
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {analysisMode === "judge" ? (
               <div className="min-h-[400px] max-h-[600px] overflow-y-auto p-4 rounded-lg macos-vibrancy border border-border">
