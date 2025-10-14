@@ -12,13 +12,11 @@ export function VerdictoChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const { messages, isLoading, sendMessage, clearHistory } = useVerdictoChat();
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSend = () => {
@@ -59,7 +57,7 @@ export function VerdictoChatbot() {
             {isOpen ? (
               <X className="h-6 w-6 text-foreground" />
             ) : (
-              <MessageCircle className="h-6 w-6 text-foreground group-hover:scale-110 transition-transform" />
+              <MessageCircle className="h-6 w-6 text-foreground" />
             )}
           </motion.div>
         </Button>
@@ -69,44 +67,31 @@ export function VerdictoChatbot() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ x: 400, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 400, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed top-24 right-6 z-50 w-96 h-[600px]"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="fixed top-24 right-6 z-40 w-[400px] h-[600px]"
           >
-            <Card className="h-full flex flex-col bg-background/95 backdrop-blur-xl border border-white/10 shadow-2xl">
+            <Card className="h-full flex flex-col bg-background/95 backdrop-blur-xl border-white/10 shadow-2xl">
               {/* Header */}
-              <div className="p-4 border-b border-white/10 bg-white/5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3
-                      className="text-lg font-light tracking-tight text-foreground"
-                      style={{
-                        fontFamily: "'Inter', sans-serif",
-                        fontWeight: 300,
-                        letterSpacing: "-0.01em",
-                        textShadow: "0 0 10px rgba(192, 192, 192, 0.3)",
-                      }}
-                    >
-                      Verdicto Legal Assistant
-                    </h3>
-                    <p className="text-xs text-muted-foreground">Powered by Llama 3.1 8B Instant</p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={clearHistory}
-                    className="h-8 w-8"
-                    title="Clear chat history"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+              <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
+                <div>
+                  <h3 className="font-semibold text-foreground">Verdicto Legal Assistant</h3>
+                  <p className="text-xs text-muted-foreground">Powered by Llama 3.1 8B Instant</p>
                 </div>
+                <Button
+                  onClick={clearHistory}
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
 
-              {/* Messages - Updated with proper scroll */}
-              <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+              {/* Messages */}
+              <ScrollArea className="flex-1 p-4">
                 <div className="space-y-4">
                   {messages.length === 0 && (
                     <div className="text-center py-8">
@@ -116,7 +101,6 @@ export function VerdictoChatbot() {
                       </p>
                     </div>
                   )}
-                  
                   {messages.map((message) => (
                     <motion.div
                       key={message.id}
@@ -141,7 +125,6 @@ export function VerdictoChatbot() {
                       </div>
                     </motion.div>
                   ))}
-                  
                   {isLoading && (
                     <motion.div
                       initial={{ opacity: 0 }}
@@ -169,6 +152,8 @@ export function VerdictoChatbot() {
                       </div>
                     </motion.div>
                   )}
+                  {/* Invisible div at the end for scrolling */}
+                  <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
 
