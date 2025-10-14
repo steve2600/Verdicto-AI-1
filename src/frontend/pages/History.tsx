@@ -10,18 +10,45 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download, Clock, MessageSquare } from "lucide-react";
-import { useQuery } from "convex/react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Download, Clock, MessageSquare, Trash2, AlertTriangle } from "lucide-react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { ConfidenceBadge } from "@/components/ConfidenceBadge";
+import { useState } from "react";
+import type { Id } from "@/convex/_generated/dataModel";
 
 export default function History() {
   const queries = useQuery(api.queries.list);
   const predictions = useQuery(api.predictions.listByUser);
+  const deleteQuery = useMutation(api.queriesDelete.deleteQuery);
+
+  const [selectedQuery, setSelectedQuery] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleExport = () => {
     toast.success("Exporting query history...");
+  };
+
+  const handleDelete = async (queryId: Id<"queries">) => {
+    setIsDeleting(true);
+    try {
+      await deleteQuery({ queryId });
+      toast.success("Query and associated prediction deleted successfully");
+      setSelectedQuery(null);
+    } catch (error) {
+      toast.error("Failed to delete query");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -106,7 +133,12 @@ export default function History() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" className="macos-button">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="macos-button"
+                        onClick={() => setSelectedQuery({ query, prediction })}
+                      >
                         View Details
                       </Button>
                     </TableCell>
@@ -127,6 +159,126 @@ export default function History() {
           )}
         </Card>
       </motion.div>
+
+      {/* View Details Dialog */}
+      <Dialog open={!!selectedQuery} onOpenChange={() => setSelectedQuery(null)}>
+        <DialogContent className="glass-strong max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-foreground text-xl">Query Details</DialogTitle>
+            <DialogDescription>
+              {selectedQuery?.query && (
+                <span className="text-sm text-muted-foreground">
+                  {new Date(selectedQuery.query._creationTime).toLocaleString()}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedQuery && (
+            <div className="space-y-6">
+              {/* Query Text */}
+              <div>
+                <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Query
+                </h4>
+                <div className="glass p-4 rounded-lg">
+                  <p className="text-sm text-foreground">{selectedQuery.query.queryText}</p>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div>
+                <h4 className="font-medium text-foreground mb-2">Status</h4>
+                <Badge
+                  variant={
+                    selectedQuery.query.status === "completed"
+                      ? "default"
+                      : selectedQuery.query.status === "failed"
+                      ? "destructive"
+                      : "secondary"
+                  }
+                >
+                  {selectedQuery.query.status}
+                </Badge>
+              </div>
+
+              {/* Prediction Results */}
+              {selectedQuery.prediction && (
+                <>
+                  <div>
+                    <h4 className="font-medium text-foreground mb-2">Confidence Score</h4>
+                    <ConfidenceBadge
+                      level={selectedQuery.prediction.confidenceLevel}
+                      score={selectedQuery.prediction.confidenceScore}
+                    />
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-foreground mb-2">Prediction</h4>
+                    <div className="glass p-4 rounded-lg">
+                      <p className="text-sm text-foreground">{selectedQuery.prediction.prediction}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-foreground mb-2">Reasoning</h4>
+                    <div className="glass p-4 rounded-lg">
+                      <p className="text-sm text-foreground">{selectedQuery.prediction.reasoning}</p>
+                    </div>
+                  </div>
+
+                  {selectedQuery.prediction.biasFlags && selectedQuery.prediction.biasFlags.length > 0 && (
+                    <div>
+                      <h4 className="font-medium text-foreground mb-2">Bias Flags</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedQuery.prediction.biasFlags.map((flag: any, idx: number) => (
+                          <Badge
+                            key={idx}
+                            variant={
+                              flag.severity === "high"
+                                ? "destructive"
+                                : flag.severity === "medium"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {flag.type}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="flex items-center justify-between gap-2">
+            <Button
+              variant="destructive"
+              onClick={() => selectedQuery && handleDelete(selectedQuery.query._id)}
+              disabled={isDeleting}
+              className="flex items-center gap-2"
+            >
+              {isDeleting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  Delete Query
+                </>
+              )}
+            </Button>
+            <Button variant="outline" onClick={() => setSelectedQuery(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
