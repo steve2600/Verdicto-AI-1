@@ -311,8 +311,7 @@ async def query_documents(
                     text = item.properties.get("text", "")
                     if text and len(text) > 100:
                         context_chunks.append(text)
-                        # Extract page number from metadata - try multiple possible keys
-                        # Weaviate stores metadata in the properties
+                        # Extract page number from metadata
                         page_num = None
                         
                         # Try to get page from various possible locations
@@ -323,15 +322,39 @@ async def query_documents(
                         elif 'metadata' in item.properties and isinstance(item.properties['metadata'], dict):
                             page_num = item.properties['metadata'].get('page')
                         
-                        # Debug logging
-                        print(f"🔍 Item properties keys: {list(item.properties.keys())}")
-                        print(f"🔍 Page number extracted: {page_num}")
+                        # Extract case information from the text
+                        # Look for case patterns like "Case No.", "v.", "vs.", etc.
+                        case_title = "Related Legal Precedent"
+                        case_citation = None
+                        
+                        # Try to extract case title from first line or sentence
+                        lines = text.split('\n')
+                        if lines:
+                            first_line = lines[0].strip()
+                            if len(first_line) > 10 and len(first_line) < 200:
+                                case_title = first_line
+                        
+                        # Look for citation patterns
+                        import re
+                        citation_patterns = [
+                            r'(\d{4}\s+\w+\s+\d+)',  # Year Reporter Volume
+                            r'(AIR\s+\d{4}\s+\w+\s+\d+)',  # AIR citations
+                            r'(\(\d{4}\)\s+\d+\s+\w+\s+\d+)',  # (Year) Volume Reporter Page
+                        ]
+                        for pattern in citation_patterns:
+                            match = re.search(pattern, text[:500])
+                            if match:
+                                case_citation = match.group(1)
+                                break
                         
                         sources.append({
                             "document_id": request.document_id,
                             "page": page_num if page_num else None,
+                            "case_title": case_title,
+                            "case_citation": case_citation,
                             "content": text[:300] + "..." if len(text) > 300 else text,
-                            "score": getattr(item.metadata, "score", 0.8)
+                            "score": getattr(item.metadata, "score", 0.8),
+                            "relevance": "High" if getattr(item.metadata, "score", 0.8) > 0.85 else "Medium"
                         })
                 
                 if not context_chunks:
@@ -347,14 +370,14 @@ async def query_documents(
                 llm = get_llm()
                 context_text = "\n\n".join(context_chunks[:3])  # Use top 3 chunks
                 
-                prompt = f"""Based on the following document context, answer the question accurately and comprehensively in 3-4 sentences.
+                prompt = f"""Based on the following legal document context, answer the question accurately and comprehensively in 3-4 sentences. 
 
-Context from document:
+Context from legal documents:
 {context_text}
 
 Question: {request.query}
 
-Answer (3-4 sentences, professional legal tone):"""
+Provide a professional legal analysis in 3-4 sentences. Focus on relevant legal principles, precedents, and applicable provisions from the context."""
                 
                 answer = llm.invoke(prompt).content
                 
