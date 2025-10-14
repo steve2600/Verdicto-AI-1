@@ -204,6 +204,7 @@ export const analyzeQuery = action({
 
       // Extract RAG results
       const ragResponse = result.answer || "No response generated";
+      const ragSources = result.sources || [];
       
       // Calculate dynamic confidence based on response quality
       // Factors: response length, presence of specific legal terms, structure
@@ -228,6 +229,11 @@ export const analyzeQuery = action({
         confidence += 0.05; // Contains some legal terms
       }
       
+      // Boost confidence if we have source references
+      if (ragSources.length > 0) {
+        confidence += 0.1;
+      }
+      
       // Cap confidence at 0.95 (never 100% certain)
       confidence = Math.min(confidence, 0.95);
 
@@ -236,7 +242,7 @@ export const analyzeQuery = action({
         queryId: args.queryId,
         ragResponse,
         confidence,
-        sources: [],
+        sources: ragSources,
       });
 
       // Update query status to completed

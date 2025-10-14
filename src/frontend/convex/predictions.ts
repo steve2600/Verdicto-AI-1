@@ -67,6 +67,13 @@ export const createFromRAG = internalMutation({
       args.confidence >= 0.5 ? "medium" as const :
       "low" as const;
 
+    // Build source references from RAG sources
+    const sourceReferences = args.sources.slice(0, 5).map((source: any) => ({
+      documentId: source.document_id || undefined,
+      page: source.page || undefined,
+      excerpt: source.content || "",
+    }));
+
     const predictionId = await ctx.db.insert("predictions", {
       queryId: args.queryId,
       userId: query.userId,
@@ -81,6 +88,7 @@ export const createFromRAG = internalMutation({
         snippet: source.content || source.text || "",
         relevance: source.score || 0.8,
       })),
+      sourceReferences,
     });
 
     return predictionId;

@@ -858,38 +858,74 @@ Please analyze this modified case and provide a prediction.`;
             <Card className="macos-card p-6 hover:shadow-2xl transition-shadow duration-300">
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Supporting Evidence
+                Supporting Evidence from Documents
               </h3>
               <div className="space-y-3">
-                {(prediction.evidenceSnippets || []).map((snippet: any, index: number) => {
-                  const relatedCase = cases?.find((c: any) => c._id === snippet.caseId);
-                  return (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      whileHover={{ x: 4, scale: 1.02 }}
-                      transition={{ delay: index * 0.1, type: "spring", stiffness: 300 }}
-                      className="macos-vibrancy p-4 rounded-lg hover:bg-primary/5 cursor-pointer"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          <span className="font-medium text-sm">
-                            {relatedCase?.caseNumber || "Case Reference"}
-                          </span>
+                {(prediction.sourceReferences || []).length > 0 ? (
+                  (prediction.sourceReferences || []).map((source: any, index: number) => {
+                    const doc = documents?.find((d: any) => d._id === source.documentId);
+                    return (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        whileHover={{ x: 4, scale: 1.02 }}
+                        transition={{ delay: index * 0.1, type: "spring", stiffness: 300 }}
+                        className="macos-vibrancy p-4 rounded-lg hover:bg-primary/5 cursor-pointer"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            <span className="font-medium text-sm">
+                              {doc?.title || "Document Reference"}
+                            </span>
+                          </div>
+                          {source.page && (
+                            <Badge variant="secondary" className="text-xs">
+                              Page {source.page}
+                            </Badge>
+                          )}
                         </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {Math.round(snippet.relevance * 100)}% relevant
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {relatedCase?.title}
-                      </p>
-                      <p className="text-sm">{snippet.snippet}</p>
-                    </motion.div>
-                  );
-                })}
+                        {doc && (
+                          <p className="text-xs text-muted-foreground mb-2">
+                            {doc.jurisdiction} • {new Date(doc.uploadDate).toLocaleDateString()}
+                          </p>
+                        )}
+                        <p className="text-sm">{source.excerpt}</p>
+                      </motion.div>
+                    );
+                  })
+                ) : (
+                  (prediction.evidenceSnippets || []).map((snippet: any, index: number) => {
+                    const relatedCase = cases?.find((c: any) => c._id === snippet.caseId);
+                    return (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        whileHover={{ x: 4, scale: 1.02 }}
+                        transition={{ delay: index * 0.1, type: "spring", stiffness: 300 }}
+                        className="macos-vibrancy p-4 rounded-lg hover:bg-primary/5 cursor-pointer"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            <span className="font-medium text-sm">
+                              {relatedCase?.caseNumber || "Case Reference"}
+                            </span>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            {Math.round(snippet.relevance * 100)}% relevant
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {relatedCase?.title}
+                        </p>
+                        <p className="text-sm">{snippet.snippet}</p>
+                      </motion.div>
+                    );
+                  })
+                )}
               </div>
             </Card>
           </motion.div>
