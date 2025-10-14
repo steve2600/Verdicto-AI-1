@@ -34,6 +34,7 @@ import {
   Loader2,
   Eye,
   Download,
+  AlertCircle,
 } from "lucide-react";
 import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -44,6 +45,7 @@ export default function DocumentLibrary() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedJurisdiction, setSelectedJurisdiction] = useState<string>("");
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [processingDocuments, setProcessingDocuments] = useState<Set<string>>(new Set());
   
   const documents = useQuery(api.documents.list, {
     jurisdiction: selectedJurisdiction || undefined,
@@ -138,13 +140,28 @@ export default function DocumentLibrary() {
           },
         });
 
+        // Track this document as processing
+        setProcessingDocuments(prev => new Set(prev).add(documentId));
+
         // Step 4: Process document with RAG backend (async, don't wait)
         processDocumentWithRAG({
           documentId,
           fileUrl: storageId,
           title: file.name.replace(".pdf", ""),
+        }).then(() => {
+          // Remove from processing set when done
+          setProcessingDocuments(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(documentId);
+            return newSet;
+          });
         }).catch(err => {
           console.error(`RAG processing failed for ${file.name}:`, err);
+          setProcessingDocuments(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(documentId);
+            return newSet;
+          });
         });
 
         successCount++;
@@ -258,6 +275,29 @@ export default function DocumentLibrary() {
         </Card>
       </motion.div>
 
+      {/* Processing Status Banner */}
+      {processingDocuments.size > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <Card className="macos-card p-4 border-blue-500/50 bg-blue-500/10">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+              <div className="flex-1">
+                <p className="font-medium text-blue-400">
+                  Processing {processingDocuments.size} document{processingDocuments.size > 1 ? 's' : ''}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  AI is analyzing and indexing your documents for semantic search...
+                </p>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Search and Filter */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -312,14 +352,25 @@ export default function DocumentLibrary() {
                 >
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center relative">
                         <FileText className="h-5 w-5 text-primary" />
+                        {processingDocuments.has(doc._id) && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-primary/30 rounded-lg">
+                            <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                          </div>
+                        )}
                       </div>
                       <div>
                         <p className="font-medium">{doc.title}</p>
                         {doc.metadata && (
                           <p className="text-xs text-muted-foreground">
                             {doc.metadata.documentType} • v{doc.metadata.version}
+                          </p>
+                        )}
+                        {processingDocuments.has(doc._id) && (
+                          <p className="text-xs text-blue-400 flex items-center gap-1 mt-1">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Ingesting with AI...
                           </p>
                         )}
                       </div>
