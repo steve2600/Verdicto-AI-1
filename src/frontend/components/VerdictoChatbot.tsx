@@ -14,6 +14,7 @@ export function VerdictoChatbot() {
   const { messages, isLoading, sendMessage, clearHistory } = useVerdictoChat();
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -104,7 +105,7 @@ export function VerdictoChatbot() {
                 </div>
               </div>
 
-              {/* Messages */}
+              {/* Messages - Updated with proper scroll */}
               <ScrollArea className="flex-1 p-4" ref={scrollRef}>
                 <div className="space-y-4">
                   {messages.length === 0 && (
