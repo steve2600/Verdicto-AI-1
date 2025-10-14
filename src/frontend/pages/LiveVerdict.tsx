@@ -488,14 +488,14 @@ export default function LiveVerdict() {
                     <h3 className="font-medium">
                       {analysisMode === "judge" ? "Verdict Determination" : "Analysis Result"}
                     </h3>
-                    {analysisResult.confidence && (
+                    {analysisResult.confidenceScore && (
                       <Badge variant="secondary">
-                        {Math.round(analysisResult.confidence * 100)}% confidence
+                        {Math.round(analysisResult.confidenceScore * 100)}% confidence
                       </Badge>
                     )}
                   </div>
-                  <p className="text-sm text-foreground leading-relaxed">
-                    {analysisResult.prediction || analysisResult.answer || "Analysis complete"}
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                    {analysisResult.prediction || analysisResult.answer || analysisResult.response || "No verdict available"}
                   </p>
                 </div>
 
