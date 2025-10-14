@@ -26,6 +26,25 @@ export const listProcessedDocuments = query({
   },
 });
 
+export const getAllResearchStats = query({
+  args: {},
+  handler: async (ctx) => {
+    // Fetch ALL research documents regardless of jurisdiction for statistics
+    const documents = await ctx.db
+      .query("documents")
+      .withIndex("by_status", (q) => q.eq("status", "processed"))
+      .collect();
+
+    // Only research documents are public
+    const researchDocs = documents.filter((d) => d.documentType === "research");
+
+    return {
+      total: researchDocs.length,
+      processed: researchDocs.filter((d) => d.status === "processed").length,
+    };
+  },
+});
+
 export const getJurisdictions = query({
   args: {},
   handler: async (ctx) => {
