@@ -138,12 +138,12 @@ export default function LegalTimeline() {
                   );
                 }}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-medium text-foreground text-sm">{doc.title}</h3>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-foreground text-sm truncate">{doc.title}</h3>
                     <p className="text-xs text-muted-foreground mt-1">{doc.jurisdiction}</p>
                   </div>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 </div>
                 {!doc.timelineEvents && (
                   <Button
