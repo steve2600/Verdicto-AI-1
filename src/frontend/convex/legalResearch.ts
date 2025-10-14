@@ -1,6 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, action } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { query, action } from "./_generated/server";
 import { internal } from "./_generated/api";
 
 /**
@@ -15,13 +14,13 @@ export const semanticSearch = action({
     const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL || "https://verdicto-ai-1-production-3dbc.up.railway.app";
 
     try {
-      // Search titles/metadata first
+      // Search titles/metadata first via internal query in a separate module (breaks TS cycles)
       const titleMatches = await ctx.runQuery(
         internal.legalResearchHelpers.searchByTitleInternal,
         { query: args.query }
       );
 
-      // Then call RAG content search
+      // Then call RAG content search and merge
       let ragResults: any[] = [];
       try {
         const response = await fetch(`${RAG_BACKEND_URL}/api/v1/documents/search`, {
@@ -54,12 +53,13 @@ export const semanticSearch = action({
           );
 
           ragResults = documentsWithDetails.filter((item) => item.document !== null);
+        } else {
+          console.warn("RAG backend search failed, using title matches only");
         }
       } catch (error) {
-        console.warn("RAG backend search failed, using title matches only:", error);
+        console.warn("RAG backend unavailable, using title matches only:", error);
       }
 
-      // Merge and deduplicate
       const titleMatchIds = new Set(titleMatches.map((m: any) => m.document._id));
       const uniqueRagResults = ragResults.filter((r: any) => !titleMatchIds.has(r.document._id));
 
@@ -79,7 +79,7 @@ export const semanticSearch = action({
       throw error;
     }
   },
-}) as any;
+});
 
 /**
  * Internal query to search documents by title and metadata
