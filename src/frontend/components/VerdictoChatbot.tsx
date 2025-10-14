@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,50 +13,63 @@ interface VerdictoChatbotProps {
 }
 
 export default function VerdictoChatbot({ isOpen, onClose }: VerdictoChatbotProps) {
-  const [input, setInput] = React.useState("");
+  const [input, setInput] = useState("");
   const { messages, isLoading, sendMessage } = useVerdictoChat();
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Enhanced auto-scroll mechanism for long responses
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Robust auto-scroll to bottom on new messages/loading changes
   useEffect(() => {
     if (!scrollAreaRef.current) return;
 
     const scrollToBottom = () => {
-      const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+      const viewport = scrollAreaRef.current?.querySelector(
+        "[data-radix-scroll-area-viewport]"
+      ) as HTMLElement | null;
+
       if (viewport) {
+        // Ensure smooth behavior and iOS momentum scrolling
         viewport.scrollTop = viewport.scrollHeight;
+        viewport.style.scrollBehavior = "smooth";
+        (viewport.style as any).webkitOverflowScrolling = "touch";
+      }
+
+      if (bottomRef.current) {
+        bottomRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
       }
     };
 
-    // Immediate scroll
+    // Immediate and double-RAF for layout stabilization
     scrollToBottom();
-    
-    // Multiple delayed attempts to handle dynamic content loading
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         scrollToBottom();
       });
     });
-    
-    const timer1 = setTimeout(scrollToBottom, 50);
-    const timer2 = setTimeout(scrollToBottom, 150);
-    const timer3 = setTimeout(scrollToBottom, 300);
+
+    // Staggered retries for async content rendering
+    const t1 = setTimeout(scrollToBottom, 50);
+    const t2 = setTimeout(scrollToBottom, 150);
+    const t3 = setTimeout(scrollToBottom, 300);
+    const t4 = setTimeout(scrollToBottom, 500);
 
     return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
     };
   }, [messages, isLoading]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
-    const message = input.trim();
+    const text = input.trim();
     setInput("");
-    await sendMessage(message);
+    await sendMessage(text);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -73,9 +86,9 @@ export default function VerdictoChatbot({ isOpen, onClose }: VerdictoChatbotProp
           className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center"
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            exit={{ opacity: 0, scale: 0.98 }}
             className="w-full h-full max-w-7xl mx-auto p-8 flex flex-col"
           >
             {/* Header */}
@@ -89,87 +102,86 @@ export default function VerdictoChatbot({ isOpen, onClose }: VerdictoChatbotProp
                 size="icon"
                 onClick={onClose}
                 className="h-10 w-10"
+                aria-label="Close chatbot"
               >
                 <X className="h-5 w-5" />
               </Button>
             </div>
 
-            {/* Messages Area with proper scrolling */}
-            <ScrollArea ref={scrollAreaRef} className="flex-1 p-6 bg-card/30 rounded-none">
+            {/* Messages */}
+            <ScrollArea
+              ref={scrollAreaRef}
+              className="flex-1 p-6 bg-card/30 rounded-none"
+              style={{ height: "calc(100vh - 220px)" }}
+            >
               <div
-                className="space-y-4 min-h-full"
+                className="space-y-4 min-h-full pb-4"
                 role="log"
                 aria-live="polite"
                 tabIndex={0}
-                style={{ WebkitOverflowScrolling: "touch" }}
               >
-                {messages.length === 0 && (
-                  <div className="text-center text-muted-foreground text-sm py-8">
-                    Ask me anything about Indian law and the Constitution.
+                {messages?.map((m: any, idx: number) => {
+                  const isUser = m?.role === "user";
+                  return (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.18 }}
+                      className={`w-full flex ${isUser ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={[
+                          "max-w-3xl rounded-xl shadow px-4 py-3",
+                          isUser
+                            ? "bg-foreground text-background"
+                            : "bg-muted text-foreground",
+                          // Ensure long content wraps and stays readable
+                          "whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                        ].join(" ")}
+                      >
+                        <ReactMarkdown>{String(m?.content ?? "")}</ReactMarkdown>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+
+                {isLoading && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Thinking...</span>
                   </div>
                 )}
-                {messages.map((msg, idx) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-2 ${
-                        msg.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-foreground"
-                      }`}
-                    >
-                      {msg.role === "assistant" ? (
-                        <div className="text-sm prose prose-sm dark:prose-invert max-w-none break-words overflow-wrap-anywhere">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
-                        </div>
-                      ) : (
-                        <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
-                {isLoading && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex justify-start"
-                  >
-                    <div className="bg-muted rounded-2xl px-4 py-2 flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="text-sm text-muted-foreground">Thinking...</span>
-                    </div>
-                  </motion.div>
-                )}
+
+                {/* Sentinel to anchor the bottom for robust scrolling */}
+                <div ref={bottomRef} aria-hidden="true" data-chat-end />
               </div>
             </ScrollArea>
 
-            {/* Input Area */}
-            <div className="p-6 border-t border-border bg-card/50 rounded-b-2xl">
-              <div className="flex gap-3">
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Ask a legal question..."
-                  disabled={isLoading}
-                  className="flex-1 h-12 text-base"
-                />
-                <Button
-                  onClick={handleSend}
-                  disabled={!input.trim() || isLoading}
-                  size="icon"
-                  className="h-12 w-12"
-                >
-                  <Send className="h-5 w-5" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Constrained to Indian jurisdiction
-              </p>
+            {/* Composer */}
+            <div className="mt-4 flex items-center gap-2 border-t border-border pt-4">
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask about Indian legal principles, precedents, and the Constitution…"
+                className="flex-1"
+                disabled={isLoading}
+                aria-label="Chat input"
+              />
+              <Button onClick={handleSend} disabled={isLoading || !input.trim()} className="gap-1.5">
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Sending…
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    Send
+                  </>
+                )}
+              </Button>
             </div>
           </motion.div>
         </motion.div>
@@ -177,5 +189,3 @@ export default function VerdictoChatbot({ isOpen, onClose }: VerdictoChatbotProp
     </AnimatePresence>
   );
 }
-
-export { VerdictoChatbot, type VerdictoChatbotProps };
