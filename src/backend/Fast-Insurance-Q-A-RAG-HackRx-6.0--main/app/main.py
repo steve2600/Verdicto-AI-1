@@ -311,11 +311,25 @@ async def query_documents(
                     text = item.properties.get("text", "")
                     if text and len(text) > 100:
                         context_chunks.append(text)
-                        # Extract page number from metadata if available
-                        page_num = item.properties.get("page", None)
+                        # Extract page number from metadata - try multiple possible keys
+                        # Weaviate stores metadata in the properties
+                        page_num = None
+                        
+                        # Try to get page from various possible locations
+                        if hasattr(item, 'metadata') and hasattr(item.metadata, 'page'):
+                            page_num = item.metadata.page
+                        elif 'page' in item.properties:
+                            page_num = item.properties['page']
+                        elif 'metadata' in item.properties and isinstance(item.properties['metadata'], dict):
+                            page_num = item.properties['metadata'].get('page')
+                        
+                        # Debug logging
+                        print(f"🔍 Item properties keys: {list(item.properties.keys())}")
+                        print(f"🔍 Page number extracted: {page_num}")
+                        
                         sources.append({
                             "document_id": request.document_id,
-                            "page": page_num,
+                            "page": page_num if page_num else None,
                             "content": text[:300] + "..." if len(text) > 300 else text,
                             "score": getattr(item.metadata, "score", 0.8)
                         })
