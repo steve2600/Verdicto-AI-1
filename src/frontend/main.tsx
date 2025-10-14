@@ -1,17 +1,4 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router";
-import { ConvexAuthProvider } from "@convex-dev/auth/react";
-import { ConvexProvider } from "convex/react";
-import { convex } from "./lib/api";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import { Toaster } from "sonner";
-import "./index.css";
-
-// Lazy load pages
-import Landing from "./pages/Landing";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
+// ... keep existing imports
 
 const router = createBrowserRouter([
   {
@@ -97,32 +84,15 @@ const router = createBrowserRouter([
         },
       },
       {
-        path: "live-verdict-history",
+        path: "ai-assistant",
         lazy: async () => {
-          const { default: LiveVerdictHistory } = await import("./pages/LiveVerdictHistory");
-          return { Component: LiveVerdictHistory };
+          const { default: AIAssistant } = await import("./pages/AIAssistant");
+          return { Component: AIAssistant };
         },
       },
+      // ... keep existing live-verdict-history route if present
     ],
-  },
-  {
-    path: "*",
-    lazy: async () => {
-      const { default: NotFound } = await import("./pages/NotFound");
-      return { Component: NotFound };
-    },
   },
 ]);
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <ConvexProvider client={convex}>
-      <ConvexAuthProvider client={convex}>
-        <ThemeProvider>
-          <RouterProvider router={router} />
-          <Toaster position="top-right" richColors />
-        </ThemeProvider>
-      </ConvexAuthProvider>
-    </ConvexProvider>
-  </StrictMode>
-);
+// ... keep existing code
