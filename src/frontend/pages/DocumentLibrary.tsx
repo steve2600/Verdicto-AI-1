@@ -132,6 +132,7 @@ export default function DocumentLibrary() {
         const documentId = await createDocument({
           title: file.name.replace(".pdf", ""),
           jurisdiction: "General",
+          documentType: "library",
           fileId: storageId,
           metadata: {
             documentType: "Legal Document",
