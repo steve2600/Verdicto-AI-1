@@ -1,350 +1,140 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Loader2, FileText, AlertTriangle, CheckCircle, Download, Trash2 } from "lucide-react";
+import React, { useState } from "react";
 import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { toast } from "sonner";
-import type { Id } from "@/convex/_generated/dataModel";
+import { Id } from "@/convex/_generated/dataModel";
+
+type Conflict = {
+  type: string;
+  severity: "low" | "medium" | "high" | "critical" | string;
+  description: string;
+  affectedDocuments?: Array<{ documentId: string; page?: number; excerpt?: string }>;
+  recommendation?: string;
+};
 
 export default function DocumentComparison() {
-  const [selectedDocuments, setSelectedDocuments] = useState<Id<"documents">[]>([]);
-  const [activeComparison, setActiveComparison] = useState<any>(null);
-  const [isComparing, setIsComparing] = useState(false);
-  const [selectedConflict, setSelectedConflict] = useState<any>(null);
-
-  const documents = useQuery(api.documents.list, { status: "processed" });
-  const comparisons = useQuery(api.comparison.getUserComparisons);
+  const comparisons = useQuery(api.comparison.getUserComparisons) as any[] | undefined;
   const compareDocuments = useAction(api.comparison.compareDocuments);
   const deleteComparison = useMutation(api.comparison.deleteComparison);
 
+  const [inputIds, setInputIds] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
   const handleCompare = async () => {
-    if (selectedDocuments.length < 2 || selectedDocuments.length > 5) {
-      toast.error("Please select 2-5 documents to compare");
+    const raw = inputIds.split(",").map((s) => s.trim()).filter(Boolean);
+    if (raw.length < 2 || raw.length > 5) {
+      alert("Provide 2-5 document IDs separated by commas.");
       return;
     }
-
-    setIsComparing(true);
-    toast.info("Comparing documents...");
     try {
-      const result = await compareDocuments({ documentIds: selectedDocuments });
-      toast.success("Comparison completed");
-      setActiveComparison(result);
-      setSelectedDocuments([]);
-    } catch (error) {
-      toast.error("Failed to compare documents");
+      setSubmitting(true);
+      const docIds = raw.map((id) => id as unknown as Id<"documents">);
+      await compareDocuments({ documentIds: docIds });
+      setInputIds("");
+    } catch (e) {
+      console.error(e);
+      alert("Comparison failed. Please try again.");
     } finally {
-      setIsComparing(false);
+      setSubmitting(false);
     }
   };
 
-  const handleDelete = async (comparisonId: Id<"documentComparisons">) => {
+  const handleDelete = async (id: Id<"documentComparisons">) => {
     try {
-      await deleteComparison({ comparisonId });
-      toast.success("Comparison deleted");
-      if (activeComparison?.comparisonId === comparisonId) {
-        setActiveComparison(null);
-      }
-    } catch (error) {
-      toast.error("Failed to delete comparison");
+      await deleteComparison({ comparisonId: id });
+    } catch (e) {
+      console.error(e);
+      alert("Delete failed.");
     }
-  };
-
-  const getRiskColor = (score: number) => {
-    if (score >= 70) return "text-red-500";
-    if (score >= 40) return "text-yellow-500";
-    return "text-green-500";
-  };
-
-  const getRiskLabel = (score: number) => {
-    if (score >= 70) return "High Risk";
-    if (score >= 40) return "Medium Risk";
-    return "Low Risk";
-  };
-
-  const severityColors: Record<string, string> = {
-    critical: "bg-red-500/20 text-red-400 border-red-500/30",
-    high: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-    medium: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-    low: "bg-green-500/20 text-green-400 border-green-500/30",
-  };
-
-  const conflictTypeIcons: Record<string, any> = {
-    contradiction: AlertTriangle,
-    inconsistency: AlertTriangle,
-    missing_clause: FileText,
-    conflicting_terms: AlertTriangle,
   };
 
   return (
-    <div className="min-h-screen p-6 md:p-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-7xl mx-auto space-y-6"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-light tracking-tight text-foreground">
-              Document Comparison
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Detect conflicts and inconsistencies across legal documents
-            </p>
-          </div>
-          <AlertTriangle className="h-12 w-12 text-muted-foreground opacity-20" />
+    <div className="p-6 space-y-6">
+      <h1 className="text-3xl font-semibold text-foreground">Document Comparison</h1>
+
+      <div className="rounded-lg border border-white/10 bg-white/5 backdrop-blur p-4">
+        <h2 className="text-lg font-medium mb-3 text-foreground">Run a new comparison</h2>
+        <p className="text-sm text-muted-foreground mb-2">
+          Paste 2-5 processed document IDs separated by commas.
+        </p>
+        <div className="flex items-center gap-2">
+          <input
+            className="flex-1 rounded-md border border-white/10 bg-transparent px-3 py-2 text-sm outline-none"
+            placeholder="docId1, docId2, docId3"
+            value={inputIds}
+            onChange={(e) => setInputIds(e.target.value)}
+          />
+          <button
+            onClick={handleCompare}
+            disabled={submitting}
+            className="rounded-md bg-foreground text-background px-4 py-2 text-sm disabled:opacity-50"
+          >
+            {submitting ? "Comparing..." : "Compare"}
+          </button>
         </div>
+      </div>
 
-        <Tabs defaultValue="new" className="w-full">
-          <TabsList className="glass-strong">
-            <TabsTrigger value="new">New Comparison</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
-          </TabsList>
+      <div className="rounded-lg border border-white/10 bg-white/5 backdrop-blur p-4">
+        <h2 className="text-lg font-medium mb-3 text-foreground">History</h2>
 
-          {/* New Comparison Tab */}
-          <TabsContent value="new" className="space-y-6">
-            {/* Document Selection */}
-            <Card className="glass-strong p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-medium text-foreground">
-                  Select Documents (2-5)
-                </h2>
-                <Badge variant="outline" className="text-foreground">
-                  {selectedDocuments.length} selected
-                </Badge>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                {documents?.map((doc) => (
-                  <motion.div
-                    key={doc._id}
-                    whileHover={{ scale: 1.02 }}
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      selectedDocuments.includes(doc._id)
-                        ? "border-primary bg-primary/10"
-                        : "border-border bg-background/50"
-                    }`}
-                    onClick={() => {
-                      setSelectedDocuments((prev) =>
-                        prev.includes(doc._id)
-                          ? prev.filter((id) => id !== doc._id)
-                          : prev.length < 5
-                          ? [...prev, doc._id]
-                          : prev
-                      );
-                    }}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-foreground text-sm">{doc.title}</h3>
-                        <p className="text-xs text-muted-foreground mt-1">{doc.jurisdiction}</p>
-                      </div>
-                      <FileText className="h-4 w-4 text-muted-foreground" />
+        {!comparisons ? (
+          <div className="text-sm text-muted-foreground">Loading...</div>
+        ) : comparisons.length === 0 ? (
+          <div className="text-sm text-muted-foreground">No comparisons yet.</div>
+        ) : (
+          <ul className="space-y-4">
+            {comparisons.map((comp: any) => (
+              <li key={comp._id} className="rounded-md border border-white/10 p-4">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <div className="min-w-0">
+                    <div className="text-foreground font-medium truncate">
+                      {(comp.documentTitles || []).join(" • ")}
                     </div>
-                  </motion.div>
-                ))}
-              </div>
-              <Button
-                onClick={handleCompare}
-                disabled={selectedDocuments.length < 2 || selectedDocuments.length > 5 || isComparing}
-                className="w-full"
-              >
-                {isComparing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Comparing...
-                  </>
-                ) : (
-                  "Compare Documents"
-                )}
-              </Button>
-            </Card>
-
-            {/* Comparison Results */}
-            {activeComparison && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-6"
-              >
-                {/* Risk Score */}
-                <Card className="glass-strong p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-medium text-foreground mb-2">Overall Risk Score</h3>
-                      <p className="text-muted-foreground text-sm">
-                        Based on {activeComparison.conflicts.length} conflicts detected
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <div
-                        className={`text-5xl font-bold ${getRiskColor(
-                          activeComparison.overallRiskScore
-                        )}`}
-                      >
-                        {activeComparison.overallRiskScore}
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {getRiskLabel(activeComparison.overallRiskScore)}
-                      </p>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(comp.comparisonDate).toLocaleString()} • Status: {comp.status}
                     </div>
                   </div>
-                </Card>
-
-                {/* Conflicts */}
-                <Card className="glass-strong p-6">
-                  <h3 className="text-lg font-medium text-foreground mb-4">Detected Conflicts</h3>
-                  <div className="space-y-4">
-                    <AnimatePresence>
-                      {activeComparison.conflicts.map((conflict: any, index: number) => {
-                        const Icon = conflictTypeIcons[conflict.type] || AlertTriangle;
-                        return (
-                          <motion.div
-                            key={index}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            transition={{ delay: index * 0.05 }}
-                            whileHover={{ scale: 1.01 }}
-                            className="glass p-4 rounded-lg cursor-pointer border border-border hover:border-primary/50 transition-all"
-                            onClick={() => setSelectedConflict(conflict)}
-                          >
-                            <div className="flex items-start gap-4">
-                              <Icon className="h-5 w-5 text-orange-500 mt-1" />
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Badge variant="outline" className={severityColors[conflict.severity]}>
-                                    {conflict.severity}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-foreground">
-                                    {conflict.type.replace(/_/g, " ")}
-                                  </Badge>
-                                </div>
-                                <p className="text-foreground font-medium">{conflict.description}</p>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                  Affects {conflict.affectedDocuments.length} document(s)
-                                </p>
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </AnimatePresence>
-                  </div>
-                </Card>
-              </motion.div>
-            )}
-          </TabsContent>
-
-          {/* History Tab */}
-          <TabsContent value="history" className="space-y-4">
-            {comparisons && comparisons.length > 0 ? (
-              comparisons.map((comp) => (
-                <Card key={comp._id} className="glass-strong p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className={severityColors[comp.overallRiskScore >= 70 ? "critical" : comp.overallRiskScore >= 40 ? "medium" : "low"]}>
-                          Risk: {comp.overallRiskScore}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(comp.comparisonDate).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p className="text-sm text-foreground mb-2">
-                        {comp.documentTitles.join(" • ")}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {comp.conflicts.length} conflicts detected
-                      </p>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="text-sm">
+                      Risk: <span className="font-semibold">{comp.overallRiskScore ?? 0}</span>
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setActiveComparison(comp)}
-                      >
-                        View
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDelete(comp._id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <button
+                      onClick={() => handleDelete(comp._id)}
+                      className="rounded-md border border-white/10 px-3 py-1.5 text-xs hover:bg-white/10"
+                    >
+                      Delete
+                    </button>
                   </div>
-                </Card>
-              ))
-            ) : (
-              <Card className="glass-strong p-12">
-                <div className="text-center text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                  <p>No comparison history</p>
-                  <p className="text-sm mt-1">Start a new comparison to see results here</p>
                 </div>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
 
-        {/* Conflict Detail Dialog */}
-        <Dialog open={!!selectedConflict} onOpenChange={() => setSelectedConflict(null)}>
-          <DialogContent className="glass-strong max-w-3xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-foreground">Conflict Details</DialogTitle>
-              <DialogDescription>
-                {selectedConflict && (
-                  <div className="flex gap-2 mt-2">
-                    <Badge variant="outline" className={severityColors[selectedConflict.severity]}>
-                      {selectedConflict.severity}
-                    </Badge>
-                    <Badge variant="outline" className="text-foreground">
-                      {selectedConflict.type.replace(/_/g, " ")}
-                    </Badge>
-                  </div>
-                )}
-              </DialogDescription>
-            </DialogHeader>
-            {selectedConflict && (
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-foreground mb-2">Description</h4>
-                  <p className="text-muted-foreground">{selectedConflict.description}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-foreground mb-2">Affected Documents</h4>
-                  <div className="space-y-3">
-                    {selectedConflict.affectedDocuments.map((doc: any, idx: number) => (
-                      <div key={idx} className="glass p-3 rounded-lg">
-                        <p className="text-xs text-muted-foreground mb-1">Page {doc.page}</p>
-                        <p className="text-sm text-foreground italic">"{doc.excerpt}"</p>
+                {Array.isArray(comp.conflicts) && comp.conflicts.length > 0 ? (
+                  <div className="mt-2 space-y-2">
+                    {comp.conflicts.map((c: Conflict, idx: number) => (
+                      <div key={idx} className="rounded bg-black/10 p-3">
+                        <div className="text-sm font-medium text-foreground">
+                          {c.type} • {c.severity}
+                        </div>
+                        <div className="text-sm text-muted-foreground">{c.description}</div>
+                        {Array.isArray(c.affectedDocuments) && c.affectedDocuments.length > 0 && (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            Affects {c.affectedDocuments.length} document(s)
+                          </div>
+                        )}
+                        {c.recommendation && (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            Recommendation: {c.recommendation}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
-                </div>
-                <div>
-                  <h4 className="font-medium text-foreground mb-2">Recommendation</h4>
-                  <div className="glass p-4 rounded-lg border-l-4 border-primary">
-                    <p className="text-muted-foreground">{selectedConflict.recommendation}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      </motion.div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">No detailed conflicts parsed.</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
