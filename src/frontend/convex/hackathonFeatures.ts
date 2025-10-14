@@ -105,6 +105,9 @@ export const simplifyText = action({
         body: JSON.stringify({
           legal_text: args.legalText,
           reading_level: args.readingLevel || "simple",
+          max_sentences: 2,
+          minimize_numbers: true,
+          use_layman_terms: true,
         }),
       });
 
