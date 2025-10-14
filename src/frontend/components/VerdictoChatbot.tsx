@@ -17,17 +17,33 @@ export function VerdictoChatbot() {
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      // Find the actual scrollable viewport inside ScrollArea
-      const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (viewport) {
-        setTimeout(() => {
-          viewport.scrollTop = viewport.scrollHeight;
-        }, 100);
-      }
-    }
-  }, [messages, isLoading]);
+    const root = scrollAreaRef.current as HTMLElement | null;
+    if (!root) return;
 
+    const viewport = root.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]');
+    if (!viewport) return;
+
+    // Ensure smooth touch scrolling on iOS
+    try {
+      (viewport.style as any).webkitOverflowScrolling = "touch";
+    } catch {
+      // no-op
+    }
+
+    const scrollToBottom = () => {
+      try {
+        // Smooth if supported
+        (viewport as any).scrollTo?.({ top: viewport.scrollHeight, behavior: "smooth" });
+      } catch {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
+    };
+
+    // Double rAF ensures DOM and layout are fully committed before scrolling
+    requestAnimationFrame(() => {
+      requestAnimationFrame(scrollToBottom);
+    });
+  }, [messages, isLoading]);
   const handleSend = () => {
     if (inputValue.trim() && !isLoading) {
       sendMessage(inputValue);
@@ -101,7 +117,12 @@ export function VerdictoChatbot() {
 
               {/* Messages */}
               <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-                <div className="space-y-4" role="log" aria-live="polite">
+                <div
+                  className="space-y-4"
+                  role="log"
+                  aria-live="polite"
+                  tabIndex={0}
+                >
                   {messages.length === 0 && (
                     <div className="text-center py-8">
                       <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
