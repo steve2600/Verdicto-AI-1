@@ -536,7 +536,7 @@ Please analyze this modified case and provide a prediction.`;
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Search all documents</SelectItem>
-                  {documents?.filter(doc => doc.status === "processed").map((doc) => (
+                  {documents?.filter((doc: any) => doc.status === "processed").map((doc: any) => (
                     <SelectItem key={doc._id} value={doc._id}>
                       {doc.title} ({doc.jurisdiction})
                     </SelectItem>

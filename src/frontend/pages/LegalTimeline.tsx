@@ -121,7 +121,7 @@ export default function LegalTimeline() {
         <Card className="glass-strong p-6">
           <h2 className="text-xl font-medium mb-4 text-foreground">Select Documents</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {documents?.map((doc) => (
+            {documents?.map((doc: any) => (
               <motion.div
                 key={doc._id}
                 whileHover={{ scale: 1.02 }}
