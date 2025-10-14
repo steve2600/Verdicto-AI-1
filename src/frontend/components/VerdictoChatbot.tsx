@@ -125,11 +125,11 @@ export function VerdictoChatbot() {
                         }`}
                       >
                         {message.role === "assistant" ? (
-                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-wrap-anywhere">
                             <ReactMarkdown>{message.content}</ReactMarkdown>
                           </div>
                         ) : (
-                          <p className="text-sm">{message.content}</p>
+                          <p className="text-sm break-words">{message.content}</p>
                         )}
                       </div>
                     </motion.div>
