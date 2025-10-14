@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Scale, Shield, Sparkles, Zap, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ export default function Landing() {
   const heroOpacity = useTransform(scrollY, [0, 300], [1, 0]);
   const featuresY = useTransform(scrollY, [200, 600], [100, 0]);
   const featuresOpacity = useTransform(scrollY, [200, 500], [0, 1]);
+
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
 
   const handleCTA = () => {
     if (isAuthenticated) {
@@ -57,7 +59,7 @@ export default function Landing() {
       </div>
 
       {/* Verdicto Chatbot */}
-      <VerdictoChatbot />
+      <VerdictoChatbot isOpen={isChatbotOpen} onClose={() => setIsChatbotOpen(false)} />
 
       {/* Animated Background Paths */}
       <div className="fixed inset-0 w-full h-full" style={{ zIndex: 0 }}>

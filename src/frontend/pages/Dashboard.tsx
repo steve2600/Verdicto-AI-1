@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Scale, FileStack, Search, AlertTriangle, FileText, HistoryIcon, Radio, FilePenLine, Trash2, Network } from "lucide-react";
+import { Scale, FileStack, Search, AlertTriangle, FileText, HistoryIcon, Radio, FilePenLine, Trash2, Network, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,7 @@ export default function Dashboard() {
   const currentUser = useQuery(api.users.currentUser);
   const resetDatabase = useMutation(api.admin.resetDatabase);
   const [isResetting, setIsResetting] = useState(false);
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
 
   const navItems = [
     { id: "prediction", label: "Case Prediction", icon: Scale, path: "/dashboard" },
@@ -44,6 +45,7 @@ export default function Dashboard() {
     { id: "reports", label: "Reports", icon: FileText, path: "/dashboard/reports" },
     { id: "history", label: "History", icon: HistoryIcon, path: "/dashboard/history" },
     { id: "live-verdict", label: "Live Verdict", icon: Radio, path: "/dashboard/live-verdict" },
+    { id: "chatbot", label: "Legal Assistant", icon: MessageSquare, action: () => setIsChatbotOpen(true) },
   ];
 
   const handleSignOut = async () => {
@@ -73,8 +75,8 @@ export default function Dashboard() {
         <ThemeToggle />
       </div>
 
-      {/* Verdicto Chatbot floating button and panel */}
-      <VerdictoChatbot />
+      {/* Verdicto Chatbot full-window overlay */}
+      <VerdictoChatbot isOpen={isChatbotOpen} onClose={() => setIsChatbotOpen(false)} />
 
       {/* Sidebar */}
       <motion.aside
@@ -98,7 +100,7 @@ export default function Dashboard() {
             return (
               <motion.button
                 key={item.id}
-                onClick={() => navigate(item.path)}
+                onClick={() => item.action ? item.action() : navigate(item.path)}
                 whileHover={{ x: 4 }}
                 whileTap={{ scale: 0.98 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
