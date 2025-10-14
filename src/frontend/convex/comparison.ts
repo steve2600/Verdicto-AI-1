@@ -49,36 +49,49 @@ export const compareDocuments = action({
           "Authorization": "Bearer 8ad62148045cbf8137a66e1d8c0974e14f62a970b4fa91afb850f461abfbadb8",
         },
         body: JSON.stringify({
-          query: `Compare these ${documents.length} legal documents and identify:
-1. CONTRADICTIONS: Statements that directly oppose each other
-2. INCONSISTENCIES: Different values, terms, or definitions for the same concept
-3. MISSING CLAUSES: Important clauses present in some documents but not others
+          query: `You are a legal document comparison expert. Analyze these ${documents.length} legal documents and identify ALL conflicts, inconsistencies, and discrepancies.
+
+DOCUMENTS TO COMPARE:
+${documents.map((d, i) => `[Document ${i}] ${d.title}`).join('\n')}
+
+ANALYSIS REQUIRED:
+For EACH conflict you find, you MUST provide:
+
+1. CONTRADICTIONS: Direct opposing statements
+   Example: "Document A states X, but Document B states NOT X"
+
+2. INCONSISTENCIES: Different values, terms, or definitions
+   Example: "Payment term is 30 days in Doc A but 45 days in Doc B"
+
+3. MISSING CLAUSES: Important clauses present in some but not others
+   Example: "Liability clause exists in Doc A but missing in Doc B"
+
 4. CONFLICTING TERMS: Different interpretations or conditions
+   Example: "Termination notice period differs: 60 days vs 90 days"
 
-For each conflict found, provide:
-- Type (contradiction/inconsistency/missing_clause/conflicting_terms)
-- Severity (critical/high/medium/low)
-- Description (what the conflict is)
-- Affected documents with page numbers and excerpts
-- Recommendation (how to resolve)
-
-Also calculate an overall risk score (0-100) based on severity and number of conflicts.
-
-Format as JSON:
+REQUIRED OUTPUT FORMAT (JSON):
 {
   "conflicts": [
     {
-      "type": "contradiction",
-      "severity": "high",
-      "description": "...",
-      "affectedDocuments": [{"documentIndex": 0, "page": 1, "excerpt": "..."}],
-      "recommendation": "..."
+      "type": "contradiction|inconsistency|missing_clause|conflicting_terms",
+      "severity": "critical|high|medium|low",
+      "description": "SPECIFIC description of what conflicts and WHERE",
+      "affectedDocuments": [
+        {
+          "documentIndex": 0,
+          "page": 1,
+          "excerpt": "EXACT text from document showing the conflict"
+        }
+      ],
+      "recommendation": "Specific action to resolve this conflict"
     }
   ],
-  "overallRiskScore": 75
+  "overallRiskScore": 0-100
 }
 
-Documents to compare: ${documents.map((d, i) => `[${i}] ${d.title}`).join(', ')}`,
+BE SPECIFIC: Include exact clauses, page numbers, and text excerpts that conflict.
+COMPARE THOROUGHLY: Check dates, amounts, terms, conditions, parties, obligations, and rights.
+PRIORITIZE: Mark critical conflicts that could cause legal issues.`,
         }),
       });
 
@@ -333,29 +346,83 @@ function parseConflicts(response: string, documents: any[]): { conflicts: any[],
     }
   }
 
-  // If still no conflicts found, create a more informative default
-  if (conflicts.length === 0) {
-    const analysisLength = response.length;
-    const hasLegalTerms = /clause|provision|section|article|statute/i.test(response);
+  // If still no conflicts found, try to extract from plain text response
+  if (conflicts.length === 0 && response.length > 50) {
+    const lines = response.split('\n').filter(line => line.trim().length > 20);
+    const extractedConflicts: any[] = [];
     
-    conflicts = [
-      {
-        type: "inconsistency",
-        severity: hasLegalTerms ? "low" : "medium",
-        description: analysisLength > 200 
-          ? "Documents have been analyzed. The AI found general differences but no critical conflicts. Review the full analysis for details."
-          : "Automated comparison completed. The documents appear similar with no major conflicts detected. Manual review recommended for detailed analysis.",
-        affectedDocuments: documents.slice(0, 2).map((d, i) => ({
-          documentId: d.id,
-          page: 1,
-          excerpt: `Document ${i + 1}: ${d.title}`,
-        })),
-        recommendation: analysisLength > 200
-          ? "Review the AI analysis for specific differences and ensure all critical clauses are consistent"
-          : "Conduct detailed manual review of all documents to identify subtle differences",
+    // Look for numbered lists or bullet points describing conflicts
+    lines.forEach((line, idx) => {
+      const trimmed = line.trim();
+      
+      // Check if line describes a conflict
+      if (/document\s+[A-Z0-9]|doc\s+[A-Z0-9]|\[document\s+\d+\]|\[doc\s+\d+\]/i.test(trimmed)) {
+        let type = "inconsistency";
+        let severity: "low" | "medium" | "high" | "critical" = "medium";
+        
+        // Determine type and severity from keywords
+        if (/contradict|opposite|conflict/i.test(trimmed)) {
+          type = "contradiction";
+          severity = "high";
+        } else if (/missing|absent|lack|not found/i.test(trimmed)) {
+          type = "missing_clause";
+          severity = "medium";
+        } else if (/differ|different|varies|inconsistent/i.test(trimmed)) {
+          type = "inconsistency";
+          severity = /critical|severe|major/i.test(trimmed) ? "high" : "medium";
+        } else if (/term|condition|clause/i.test(trimmed)) {
+          type = "conflicting_terms";
+          severity = "medium";
+        }
+        
+        // Extract page numbers if mentioned
+        const pageMatches = trimmed.match(/page\s+(\d+)/gi);
+        const pages = pageMatches ? pageMatches.map(m => parseInt(m.match(/\d+/)![0])) : [1];
+        
+        // Extract document references
+        const docMatches = trimmed.match(/document\s+([A-Z0-9])|doc\s+([A-Z0-9])|\[document\s+(\d+)\]/gi);
+        
+        extractedConflicts.push({
+          type,
+          severity,
+          description: trimmed.replace(/^\d+[\.\)]\s*/, '').substring(0, 300),
+          affectedDocuments: documents.slice(0, Math.min(2, documents.length)).map((d, i) => ({
+            documentId: d.id,
+            page: pages[i] || pages[0] || 1,
+            excerpt: trimmed.substring(0, 200),
+          })),
+          recommendation: `Review ${type.replace(/_/g, ' ')} between documents and ensure consistency`,
+        });
       }
-    ];
-    overallRiskScore = hasLegalTerms ? 20 : 30;
+    });
+    
+    if (extractedConflicts.length > 0) {
+      conflicts = extractedConflicts.slice(0, 15); // Limit to 15 conflicts
+      const severityScores = { low: 10, medium: 25, high: 40, critical: 60 };
+      overallRiskScore = Math.min(
+        100,
+        conflicts.reduce((sum, c) => sum + (severityScores[c.severity as keyof typeof severityScores] || 25), 0)
+      );
+    } else {
+      // Final fallback with more context
+      const hasLegalTerms = /clause|provision|section|article|statute|agreement|contract/i.test(response);
+      conflicts = [
+        {
+          type: "inconsistency",
+          severity: "low",
+          description: hasLegalTerms 
+            ? "AI analysis completed. Documents contain legal terminology but specific conflicts require manual review to identify precise discrepancies."
+            : "Documents compared. No major structural conflicts detected automatically. Detailed clause-by-clause review recommended for comprehensive analysis.",
+          affectedDocuments: documents.map((d, i) => ({
+            documentId: d.id,
+            page: 1,
+            excerpt: `${d.title} - Full document review required`,
+          })),
+          recommendation: "Conduct detailed manual comparison focusing on: dates, amounts, party names, obligations, termination clauses, and liability provisions",
+        }
+      ];
+      overallRiskScore = 25;
+    }
   }
 
   return { conflicts, overallRiskScore };
