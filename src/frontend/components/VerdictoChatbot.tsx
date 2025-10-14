@@ -17,14 +17,14 @@ export function VerdictoChatbot() {
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (messagesEndRef.current) {
-      // Use setTimeout to ensure DOM has updated
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ 
-          behavior: "smooth",
-          block: "end"
-        });
-      }, 100);
+    if (scrollAreaRef.current) {
+      // Find the actual scrollable viewport inside ScrollArea
+      const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        setTimeout(() => {
+          viewport.scrollTop = viewport.scrollHeight;
+        }, 100);
+      }
     }
   }, [messages, isLoading]);
 
