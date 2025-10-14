@@ -370,14 +370,20 @@ async def query_documents(
                 llm = get_llm()
                 context_text = "\n\n".join(context_chunks[:3])  # Use top 3 chunks
                 
-                prompt = f"""Based on the following legal document context, answer the question accurately and comprehensively in 3-4 sentences. 
+                prompt = f"""Based on the following legal document context, provide a structured legal analysis in the following format:
+
+CASE TYPE: [Identify the type of case - Criminal/Civil/Constitutional]
+VERDICT: [State the verdict - Guilty/Not Guilty/Liable/Not Liable/etc.]
+SENTENCING: [Provide detailed sentencing or remedies with specific legal provisions and sections]
+LEGAL BASIS: [Explain the legal reasoning with relevant articles, sections, and landmark case precedents]
+CONFIDENCE: [Provide confidence percentage with supporting case references]
 
 Context from legal documents:
 {context_text}
 
 Question: {request.query}
 
-Provide a professional legal analysis in 3-4 sentences. Focus on relevant legal principles, precedents, and applicable provisions from the context."""
+Provide a comprehensive structured analysis following the exact format above."""
                 
                 answer = llm.invoke(prompt).content
                 
@@ -410,13 +416,19 @@ Provide a professional legal analysis in 3-4 sentences. Focus on relevant legal 
 
 Question: {request.query}
 
-Provide a professional legal analysis based on:
+Provide a structured legal analysis in the following format:
+
+CASE TYPE: [Identify the type of case - Criminal/Civil/Constitutional]
+VERDICT: [State the verdict - Guilty/Not Guilty/Liable/Not Liable/etc.]
+SENTENCING: [Provide detailed sentencing or remedies with specific legal provisions and sections]
+LEGAL BASIS: [Explain the legal reasoning with relevant articles, sections, and landmark case precedents from Indian law]
+CONFIDENCE: [Provide confidence percentage with supporting case references from Indian Supreme Court and High Courts]
+
+Base your analysis on:
 - The Constitution of India
 - Indian Penal Code (IPC) and relevant statutes
 - Landmark Supreme Court and High Court judgments
-- Established legal principles and precedents
-
-Answer in 3-4 sentences with specific legal references where applicable."""
+- Established legal principles and precedents"""
             
             answer = llm.invoke(prompt).content
             
