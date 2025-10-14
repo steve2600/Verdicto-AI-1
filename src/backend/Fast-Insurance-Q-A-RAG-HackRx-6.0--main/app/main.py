@@ -304,19 +304,29 @@ async def query_documents(
                     fusion_type=HybridFusion.RANKED
                 )
                 
-                # Extract relevant context
+                # Extract relevant context with metadata
                 context_chunks = []
+                sources = []
                 for item in response.objects:
                     text = item.properties.get("text", "")
                     if text and len(text) > 100:
                         context_chunks.append(text)
+                        # Extract page number from metadata if available
+                        page_num = item.properties.get("page", None)
+                        sources.append({
+                            "document_id": request.document_id,
+                            "page": page_num,
+                            "content": text[:300] + "..." if len(text) > 300 else text,
+                            "score": getattr(item.metadata, "score", 0.8)
+                        })
                 
                 if not context_chunks:
                     return {
                         "status": "success",
                         "query": request.query,
                         "answer": "I couldn't find relevant information in the selected document to answer your question.",
-                        "document_id": request.document_id
+                        "document_id": request.document_id,
+                        "sources": []
                     }
                 
                 # Generate answer using LLM with context
@@ -339,7 +349,8 @@ Answer (3-4 sentences, professional legal tone):"""
                     "query": request.query,
                     "answer": answer,
                     "document_id": request.document_id,
-                    "chunks_used": len(context_chunks)
+                    "chunks_used": len(context_chunks),
+                    "sources": sources[:3]  # Return top 3 sources with metadata
                 }
             except Exception as collection_error:
                 # Collection doesn't exist or query failed
@@ -348,7 +359,8 @@ Answer (3-4 sentences, professional legal tone):"""
                     "status": "error",
                     "query": request.query,
                     "answer": f"The selected document needs to be re-uploaded and processed. Please upload it again from the Document Library. Error: Document collection not found in vector store.",
-                    "document_id": request.document_id
+                    "document_id": request.document_id,
+                    "sources": []
                 }
         
         else:
@@ -358,7 +370,8 @@ Answer (3-4 sentences, professional legal tone):"""
                 "status": "success",
                 "query": request.query,
                 "answer": "Please select a specific document from your Document Library to get context-aware answers. Without a document selected, I cannot provide accurate legal analysis.",
-                "document_id": None
+                "document_id": None,
+                "sources": []
             }
 
     except Exception as e:

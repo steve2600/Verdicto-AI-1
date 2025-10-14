@@ -1026,9 +1026,30 @@ async def load_email_semantic(path_or_url: str, max_chunks: int = 100, query: st
 
 
 # Main API functions
-async def load_pdf_ultra_fast(path_or_url: str, query: str = None) -> List[Document]:
-    """Ultra fast PDF loading with semantic similarity - main API function"""
-    return await load_pdf_semantic(path_or_url, max_chunks=100, query=query)
+async def load_pdf_ultra_fast(pdf_path: str) -> List[Document]:
+    """Load PDF with page metadata preserved"""
+    try:
+        import fitz  # PyMuPDF
+        
+        doc = fitz.open(pdf_path)
+        documents = []
+        
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            text = page.get_text()
+            
+            if text.strip():
+                # Create document with page metadata
+                documents.append(Document(
+                    page_content=text,
+                    metadata={"page": page_num + 1}  # 1-indexed page numbers
+                ))
+        
+        doc.close()
+        return documents
+    except Exception as e:
+        print(f"Error loading PDF: {e}")
+        return []
 
 
 async def load_document_ultra_fast(path_or_url: str, query: str = None) -> List[Document]:
