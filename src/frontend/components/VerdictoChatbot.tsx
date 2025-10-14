@@ -7,8 +7,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useVerdictoChat } from "@/hooks/use-verdicto-chat";
 import ReactMarkdown from "react-markdown";
 
-export default function VerdictoChatbot() {
-  const [isOpen, setIsOpen] = React.useState(false);
+interface VerdictoChatbotProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function VerdictoChatbot({ isOpen, onClose }: VerdictoChatbotProps) {
   const [input, setInput] = React.useState("");
   const { messages, isLoading, sendMessage } = useVerdictoChat();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -60,49 +64,38 @@ export default function VerdictoChatbot() {
   };
 
   return (
-    <>
-      {/* Floating Button */}
-      {!isOpen && (
-        <motion.button
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          exit={{ scale: 0 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-2xl flex items-center justify-center border border-primary/20"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center"
         >
-          <span className="text-xl font-bold">V</span>
-        </motion.button>
-      )}
-
-      {/* Chat Panel */}
-      <AnimatePresence>
-        {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 z-50 w-96 h-[600px] rounded-2xl border border-border bg-card/95 backdrop-blur-xl shadow-2xl flex flex-col overflow-hidden"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="w-full h-full max-w-7xl mx-auto p-8 flex flex-col"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-border bg-card/50">
+            <div className="flex items-center justify-between p-6 border-b border-border bg-card/50 rounded-t-2xl">
               <div>
-                <h3 className="font-semibold text-foreground">Verdicto Legal Assistant</h3>
-                <p className="text-xs text-muted-foreground">Powered by Llama 3.1 8B Instant</p>
+                <h3 className="text-2xl font-semibold text-foreground">Verdicto Legal Assistant</h3>
+                <p className="text-sm text-muted-foreground">Powered by Llama 3.1 8B Instant</p>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setIsOpen(false)}
-                className="h-8 w-8"
+                onClick={onClose}
+                className="h-10 w-10"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </Button>
             </div>
 
             {/* Messages Area with proper scrolling */}
-            <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
+            <ScrollArea ref={scrollAreaRef} className="flex-1 p-6 bg-card/30 rounded-none">
               <div
                 className="space-y-4 min-h-full"
                 role="log"
@@ -155,22 +148,23 @@ export default function VerdictoChatbot() {
             </ScrollArea>
 
             {/* Input Area */}
-            <div className="p-4 border-t border-border bg-card/50">
-              <div className="flex gap-2">
+            <div className="p-6 border-t border-border bg-card/50 rounded-b-2xl">
+              <div className="flex gap-3">
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Ask a legal question..."
                   disabled={isLoading}
-                  className="flex-1"
+                  className="flex-1 h-12 text-base"
                 />
                 <Button
                   onClick={handleSend}
                   disabled={!input.trim() || isLoading}
                   size="icon"
+                  className="h-12 w-12"
                 >
-                  <Send className="h-4 w-4" />
+                  <Send className="h-5 w-5" />
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-2 text-center">
@@ -178,10 +172,10 @@ export default function VerdictoChatbot() {
               </p>
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
-export { VerdictoChatbot };
+export { VerdictoChatbot, type VerdictoChatbotProps };
