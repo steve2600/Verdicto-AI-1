@@ -22,6 +22,7 @@ import type * as comparison from "../comparison.js";
 import type * as documents from "../documents.js";
 import type * as hackathonFeatures from "../hackathonFeatures.js";
 import type * as http from "../http.js";
+import type * as knowledgeGraph from "../knowledgeGraph.js";
 import type * as legalResearch from "../legalResearch.js";
 import type * as legalResearchActions from "../legalResearchActions.js";
 import type * as legalResearchHelpers from "../legalResearchHelpers.js";
@@ -52,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   documents: typeof documents;
   hackathonFeatures: typeof hackathonFeatures;
   http: typeof http;
+  knowledgeGraph: typeof knowledgeGraph;
   legalResearch: typeof legalResearch;
   legalResearchActions: typeof legalResearchActions;
   legalResearchHelpers: typeof legalResearchHelpers;

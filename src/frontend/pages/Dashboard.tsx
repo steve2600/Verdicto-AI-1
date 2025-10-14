@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Scale, FileStack, Search, AlertTriangle, FileText, HistoryIcon, Radio, FilePenLine, Trash2 } from "lucide-react";
+import { Scale, FileStack, Search, AlertTriangle, FileText, HistoryIcon, Radio, FilePenLine, Trash2, Network } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,7 @@ export default function Dashboard() {
     { id: "documents", label: "Document Library", icon: FileStack, path: "/dashboard/documents" },
     { id: "timeline", label: "Legal Timeline", icon: HistoryIcon, path: "/dashboard/timeline" },
     { id: "comparison", label: "Document Comparison", icon: FileText, path: "/dashboard/comparison" },
+    { id: "knowledge-graph", label: "Knowledge Graph", icon: Network, path: "/dashboard/knowledge-graph" },
     { id: "research", label: "Legal Research", icon: Search, path: "/dashboard/research" },
     { id: "bias", label: "Bias Insights", icon: AlertTriangle, path: "/dashboard/bias" },
     { id: "reports", label: "Reports", icon: FileText, path: "/dashboard/reports" },

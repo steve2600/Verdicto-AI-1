@@ -170,4 +170,30 @@ export default defineSchema({
     aiSummary: v.string(),
     timestamp: v.number(),
   }).index("by_user", ["userId"]),
+
+  // Knowledge graphs for 3D visualization
+  knowledgeGraphs: defineTable({
+    userId: v.id("users"),
+    queryId: v.optional(v.id("queries")),
+    centerCaseId: v.optional(v.string()),
+    nodes: v.array(v.object({
+      id: v.string(),
+      label: v.string(),
+      group: v.string(),
+      size: v.number(),
+      color: v.string(),
+      courtLevel: v.optional(v.string()),
+      biasScore: v.optional(v.number()),
+      relevance: v.optional(v.number()),
+      summary: v.optional(v.string()),
+      citation: v.optional(v.string()),
+    })),
+    edges: v.array(v.object({
+      source: v.string(),
+      target: v.string(),
+      value: v.number(),
+      type: v.optional(v.string()),
+    })),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
 });

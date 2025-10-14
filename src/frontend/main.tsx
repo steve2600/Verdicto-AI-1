@@ -76,6 +76,13 @@ const router = createBrowserRouter([
         },
       },
       {
+        path: "knowledge-graph",
+        lazy: async () => {
+          const { default: KnowledgeGraph } = await import("./pages/KnowledgeGraph");
+          return { Component: KnowledgeGraph };
+        },
+      },
+      {
         path: "reports",
         lazy: async () => {
           const { default: Reports } = await import("./pages/Reports");
