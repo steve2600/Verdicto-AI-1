@@ -1,0 +1,12 @@
+{
+  "name": "batch-ingestion-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Batch ingestion scripts for legal cases",
+  "scripts": {
+    "ingest": "node batch-ingest-legal-cases.js"
+  },
+  "dependencies": {
+    "convex": "^1.27.5"
+  }
+}
