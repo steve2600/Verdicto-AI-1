@@ -1,7 +1,12 @@
 {
   "status": "success",
-  "translation": {
-    "translated_text": "i need legal help",
-    ...
-  }
+  "query": "...",
+  "answer": "...",
+  "sources": [
+    {
+      "document_id": "...",
+      "page": 5,
+      "content": "excerpt text..."
+    }
+  ]
 }
