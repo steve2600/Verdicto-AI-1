@@ -1,2 +1,8 @@
-// Current implementation in rag.ts:
-biasImpact = (1 - biasScore) * 0.8;  // 80% weight for bias
+// Bias impact calculation (80% weight)
+const biasImpact = (1 - biasScore) * 0.8;
+
+// Response quality factors (20% weight)
+const responseQuality = /* various factors */ * 0.2;
+
+// Final confidence
+confidence = baseConfidence + biasImpact + responseQuality;
