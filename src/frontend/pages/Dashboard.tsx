@@ -28,7 +28,6 @@ export default function Dashboard() {
     { id: "reports", label: "Reports", icon: FileText, path: "/dashboard/reports" },
     { id: "history", label: "History", icon: HistoryIcon, path: "/dashboard/history" },
     { id: "live-verdict", label: "Live Verdict", icon: Radio, path: "/dashboard/live-verdict" },
-    { id: "live-verdict-history", label: "Live Verdict History", icon: HistoryIcon, path: "/dashboard/live-verdict-history" },
   ];
 
   const handleSignOut = async () => {
