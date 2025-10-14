@@ -13,11 +13,20 @@ export function VerdictoChatbot() {
   const [inputValue, setInputValue] = useState("");
   const { messages, isLoading, sendMessage, clearHistory } = useVerdictoChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (messagesEndRef.current) {
+      // Use setTimeout to ensure DOM has updated
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ 
+          behavior: "smooth",
+          block: "end"
+        });
+      }, 100);
+    }
+  }, [messages, isLoading]);
 
   const handleSend = () => {
     if (inputValue.trim() && !isLoading) {
@@ -91,7 +100,7 @@ export function VerdictoChatbot() {
               </div>
 
               {/* Messages */}
-              <ScrollArea className="flex-1 p-4">
+              <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
                 <div className="space-y-4">
                   {messages.length === 0 && (
                     <div className="text-center py-8">
