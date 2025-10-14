@@ -71,6 +71,8 @@ export default function CasePrediction() {
   const [showSimulation, setShowSimulation] = useState(false);
   const [simulationResult, setSimulationResult] = useState<any>(null);
   const [modifications, setModifications] = useState<any>({});
+  const [simulationQueryId, setSimulationQueryId] = useState<Id<"queries"> | null>(null);
+  const [isSimulating, setIsSimulating] = useState(false);
 
   const createQuery = useMutation(api.queries.create);
   const analyzeWithRAG = useAction(api.rag.analyzeQuery);
@@ -81,6 +83,11 @@ export default function CasePrediction() {
   const prediction = useQuery(
     api.predictions.getByQuery,
     currentQueryId ? { queryId: currentQueryId } : "skip"
+  );
+  
+  const simulationPrediction = useQuery(
+    api.predictions.getByQuery,
+    simulationQueryId ? { queryId: simulationQueryId } : "skip"
   );
   const biasReport = useQuery(
     api.biasReports.getByPrediction,
@@ -396,21 +403,57 @@ export default function CasePrediction() {
   };
 
   const handleSimulate = async () => {
-    if (!prediction) return;
+    if (!prediction || !queryText.trim()) {
+      toast.error("Please run a base case analysis first");
+      return;
+    }
     
+    // Check if any modifications are selected
+    const selectedMods = Object.entries(modifications).filter(([_, value]) => value === true);
+    if (selectedMods.length === 0) {
+      toast.error("Please select at least one modification");
+      return;
+    }
+    
+    setIsSimulating(true);
     try {
-      const result = await simulateOutcome({
-        baseCase: { facts: queryText },
-        modifications
+      // Build the modification text
+      const modificationTexts: string[] = [];
+      if (modifications.remove_prior_conviction) modificationTexts.push("• Remove Prior Conviction");
+      if (modifications.add_strong_alibi) modificationTexts.push("• Add Strong Alibi");
+      if (modifications.improve_witness_credibility) modificationTexts.push("• Improve Witness Credibility");
+      if (modifications.add_mitigating_factors) modificationTexts.push("• Add Mitigating Factors");
+      if (modifications.reduce_flight_risk) modificationTexts.push("• Reduce Flight Risk");
+      if (modifications.enhance_evidence) modificationTexts.push("• Enhance Evidence Quality");
+      
+      // Construct the modified query
+      const modifiedQuery = `Original query: ${queryText}
+
+Modified scenario: Consider the following changes:
+${modificationTexts.join('\n')}
+
+Please analyze this modified case and provide a prediction.`;
+      
+      // Create a new query for the simulation
+      const simQueryId = await createQuery({ 
+        queryText: modifiedQuery,
+        uploadedFiles: undefined
+      });
+      setSimulationQueryId(simQueryId);
+      
+      // Send to RAG backend for analysis with selected documents
+      await analyzeWithRAG({ 
+        queryId: simQueryId, 
+        queryText: modifiedQuery,
+        documentIds: selectedDocuments.length > 0 ? selectedDocuments : undefined
       });
       
-      if (result.success) {
-        setSimulationResult(result.simulation);
-        toast.success("Simulation complete!");
-      }
+      toast.success("Simulation complete!");
     } catch (error) {
-      toast.error("Simulation failed");
+      toast.error("Simulation failed. Please try again.");
       console.error(error);
+    } finally {
+      setIsSimulating(false);
     }
   };
 
@@ -939,46 +982,69 @@ export default function CasePrediction() {
                   <Button 
                     onClick={handleSimulate} 
                     className="w-full neon-glow"
-                    disabled={Object.keys(modifications).length === 0}
+                    disabled={Object.keys(modifications).filter(k => modifications[k]).length === 0 || isSimulating}
                   >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Run Simulation
+                    {isSimulating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Running Simulation...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Run Simulation
+                      </>
+                    )}
                   </Button>
 
-                  {simulationResult && (
+                  {simulationPrediction && (
                     <div className="mt-4 space-y-4">
                       <div className="grid md:grid-cols-2 gap-4">
-                        <div className="bg-muted/50 p-4 rounded-lg">
+                        <div className="bg-muted/50 p-4 rounded-lg border-2 border-border">
                           <h4 className="font-medium mb-2 text-sm text-muted-foreground">Base Case</h4>
-                          <p className="text-2xl font-bold capitalize">
-                            {simulationResult.base_case.prediction.predictedOutcome}
+                          <p className="text-lg font-bold mb-2">
+                            {prediction.prediction}
                           </p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Confidence: {Math.round(simulationResult.base_case.prediction.confidenceScore * 100)}%
-                          </p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Confidence:</span>
+                            <span className="text-xl font-bold text-primary">
+                              {Math.round(prediction.confidenceScore * 100)}%
+                            </span>
+                          </div>
                         </div>
                         
                         <div className="bg-primary/10 p-4 rounded-lg border-2 border-primary/20">
                           <h4 className="font-medium mb-2 text-sm text-primary">Modified Case</h4>
-                          <p className="text-2xl font-bold capitalize">
-                            {simulationResult.modified_case.prediction.predictedOutcome}
+                          <p className="text-lg font-bold mb-2">
+                            {simulationPrediction.prediction}
                           </p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Confidence: {Math.round(simulationResult.modified_case.prediction.confidenceScore * 100)}%
-                          </p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Confidence:</span>
+                            <span className="text-xl font-bold text-primary">
+                              {Math.round(simulationPrediction.confidenceScore * 100)}%
+                            </span>
+                          </div>
                         </div>
                       </div>
                       
                       <div className="bg-muted/50 p-4 rounded-lg">
                         <h4 className="font-medium mb-2">Impact Analysis</h4>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {simulationResult.impact_analysis.recommendation}
-                        </p>
-                        {simulationResult.impact_analysis.outcome_changed && (
-                          <Badge variant="default" className="mt-2">
-                            Outcome Changed: {simulationResult.impact_analysis.confidence_change_percent}% confidence shift
-                          </Badge>
-                        )}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Confidence Change:</span>
+                            <Badge variant={
+                              simulationPrediction.confidenceScore > prediction.confidenceScore 
+                                ? "default" 
+                                : "secondary"
+                            }>
+                              {simulationPrediction.confidenceScore > prediction.confidenceScore ? "+" : ""}
+                              {Math.round((simulationPrediction.confidenceScore - prediction.confidenceScore) * 100)}%
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            The modifications {simulationPrediction.confidenceScore > prediction.confidenceScore ? "improved" : "changed"} the case outcome confidence by {Math.abs(Math.round((simulationPrediction.confidenceScore - prediction.confidenceScore) * 100))}%.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}
