@@ -241,6 +241,13 @@ async def ultra_fast_upload(vectorstore_instance, docs: List[Document]):
     if not docs:
         return
 
+    # Ensure all documents have their metadata properly set
+    for doc in docs:
+        if "page" in doc.metadata:
+            print(f"📄 Uploading document chunk with page: {doc.metadata.get('page')}")
+        else:
+            print(f"⚠️ Document chunk missing page metadata")
+
     batch_size = min(128, len(docs))
     semaphore = asyncio.Semaphore(6)
 
@@ -252,7 +259,8 @@ async def ultra_fast_upload(vectorstore_instance, docs: List[Document]):
         async with semaphore:
             try:
                 await run_in_threadpool(vectorstore_instance.add_documents, batch)
-            except:
+            except Exception as e:
+                print(f"❌ Batch upload error: {e}")
                 pass
 
     batches = list(create_batches(docs, batch_size))
@@ -274,6 +282,12 @@ async def create_ultra_fast_vectorstore(docs: List[Document], document_id: str =
     """Create vectorstore with optional deterministic naming"""
     collection_name = get_unique_collection_name(document_id)
     embeddings = get_embeddings()
+    
+    # Ensure all documents have page metadata preserved
+    print(f"📊 Creating vectorstore with {len(docs)} documents")
+    for i, doc in enumerate(docs[:3]):  # Log first 3 for debugging
+        print(f"  Doc {i}: page={doc.metadata.get('page', 'N/A')}, content_length={len(doc.page_content)}")
+    
     temp_vectorstore = WeaviateVectorStore(
         client=get_weaviate_client(),
         index_name=collection_name,
