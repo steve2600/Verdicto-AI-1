@@ -33,25 +33,25 @@ export default function LiveVerdict() {
       recognitionInstance.lang = "en-US";
 
       recognitionInstance.onresult = (event: any) => {
-        let interimTranscript = "";
-        let finalTranscript = "";
+        let interimText = "";
+        let finalText = "";
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcriptPart = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            finalTranscript += transcriptPart + " ";
+            finalText += transcriptPart + " ";
           } else {
-            interimTranscript += transcriptPart;
+            interimText += transcriptPart;
           }
         }
 
         // Only append final transcript to permanent transcript
-        if (finalTranscript) {
-          setTranscript((prev) => prev + finalTranscript);
+        if (finalText) {
+          setTranscript((prev) => prev + finalText);
         }
         
         // Update interim transcript separately for live display
-        setInterimTranscript(interimTranscript);
+        setInterimTranscript(interimText);
       };
 
       recognitionInstance.onerror = (event: any) => {
