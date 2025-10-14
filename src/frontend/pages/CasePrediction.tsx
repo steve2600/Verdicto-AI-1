@@ -293,14 +293,10 @@ export default function CasePrediction() {
             targetLang: "en"
           });
           
-          console.log("Translation result:", translationResult);
-          
-          // Backend returns: { status: "success", translation: { translated_text: "..." } }
           if (translationResult.status === "success" && translationResult.translation?.translated_text) {
             processedQuery = translationResult.translation.translated_text;
             toast.success(`Translated from ${selectedLanguage} to English`);
           } else {
-            console.warn("Translation response missing translated_text:", translationResult);
             toast.warning("Translation unavailable, using original text");
           }
         } catch (error) {
@@ -315,11 +311,12 @@ export default function CasePrediction() {
       });
       setCurrentQueryId(queryId);
       
-      // Send to RAG backend for analysis with selected documents
+      // Send to RAG backend for analysis with selected documents AND user mode
       await analyzeWithRAG({ 
         queryId, 
         queryText: processedQuery,
-        documentIds: selectedDocuments.length > 0 ? selectedDocuments : undefined
+        documentIds: selectedDocuments.length > 0 ? selectedDocuments : undefined,
+        userMode: userMode // Pass the current mode to the backend
       });
       
       toast.success("Analysis complete!");
@@ -704,21 +701,14 @@ Please analyze this modified case and provide a prediction.`;
                       score={prediction.confidenceScore}
                     />
                   </div>
-                  {userMode === "citizen" && isSimplifying ? (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Simplifying for citizen mode...</span>
-                    </div>
-                  ) : isTranslatingResponse && selectedLanguage !== "en" ? (
+                  {isTranslatingResponse && selectedLanguage !== "en" ? (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       <span>Translating...</span>
                     </div>
                   ) : (
                     <p className="text-muted-foreground">
-                      {userMode === "citizen" && simplifiedText
-                        ? simplifiedText
-                        : selectedLanguage !== "en" && translatedPrediction 
+                      {selectedLanguage !== "en" && translatedPrediction 
                         ? translatedPrediction 
                         : prediction.prediction}
                     </p>
