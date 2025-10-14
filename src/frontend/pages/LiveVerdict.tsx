@@ -266,12 +266,11 @@ RISK ASSESSMENT: [Details]`;
         queryText: enhancedPrompt,
       });
 
-      // For Judge Mode, use selected document if available
-      // For Query Mode, always use broader knowledge base
+      // For both modes, use selected document if available
       const result = await analyzeWithRAG({
         queryId,
         queryText: enhancedPrompt,
-        documentIds: analysisMode === "judge" && selectedDocumentId ? [selectedDocumentId] : undefined,
+        documentIds: selectedDocumentId ? [selectedDocumentId] : undefined,
         userMode: "lawyer",
       });
 
@@ -396,62 +395,60 @@ RISK ASSESSMENT: [Details]`;
 
             <Separator className="my-4" />
 
-            {analysisMode === "judge" && (
-              <div className="mb-4 space-y-3">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Upload Case Documents (Optional)</label>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      className="macos-vibrancy"
-                      onClick={() => {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = '.pdf';
-                        input.multiple = false;
-                        input.onchange = (e) => handleFileUpload(e as unknown as React.ChangeEvent<HTMLInputElement>);
-                        input.click();
+            <div className="mb-4 space-y-3">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Upload Case Documents (Optional)</label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    className="macos-vibrancy"
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = '.pdf';
+                      input.multiple = false;
+                      input.onchange = (e) => handleFileUpload(e as unknown as React.ChangeEvent<HTMLInputElement>);
+                      input.click();
+                    }}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Document
+                  </Button>
+                  
+                  {documents && documents.filter((d: any) => d.status === "processed").length > 0 && (
+                    <Select 
+                      value={selectedDocumentId || "none"} 
+                      onValueChange={(val: string) => {
+                        if (val === "none") {
+                          setSelectedDocumentId(null);
+                        } else {
+                          setSelectedDocumentId(val as Id<"documents">);
+                        }
                       }}
                     >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Document
-                    </Button>
-                    
-                    {documents && documents.filter((d: any) => d.status === "processed").length > 0 && (
-                      <Select 
-                        value={selectedDocumentId || "none"} 
-                        onValueChange={(val: string) => {
-                          if (val === "none") {
-                            setSelectedDocumentId(null);
-                          } else {
-                            setSelectedDocumentId(val as Id<"documents">);
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="w-[300px] macos-vibrancy">
-                          <FileText className="h-4 w-4 mr-2" />
-                          <SelectValue placeholder="Or select existing document" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Use Constitution of India</SelectItem>
-                          {documents?.filter((doc: any) => doc.status === "processed").map((doc: any) => (
-                            <SelectItem key={doc._id} value={doc._id}>
-                              {doc.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                  {selectedDocumentId && (
-                    <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                      <CheckCircle2 className="h-3 w-3 text-green-500" />
-                      Document selected for analysis
-                    </p>
+                      <SelectTrigger className="w-[300px] macos-vibrancy">
+                        <FileText className="h-4 w-4 mr-2" />
+                        <SelectValue placeholder="Or select existing document" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Use Constitution of India</SelectItem>
+                        {documents?.filter((doc: any) => doc.status === "processed").map((doc: any) => (
+                          <SelectItem key={doc._id} value={doc._id}>
+                            {doc.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )}
                 </div>
+                {selectedDocumentId && (
+                  <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    Document selected for analysis
+                  </p>
+                )}
               </div>
-            )}
+            </div>
 
             {analysisMode === "judge" ? (
               <div className="min-h-[400px] max-h-[600px] overflow-y-auto p-4 rounded-lg macos-vibrancy border border-border">
@@ -494,12 +491,14 @@ RISK ASSESSMENT: [Details]`;
                   className="min-h-[300px] macos-vibrancy"
                 />
                 
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                  <p className="text-sm text-blue-400 flex items-center gap-2">
-                    <Scale className="h-4 w-4" />
-                    Analysis based on the Constitution of India and established legal precedents
-                  </p>
-                </div>
+                {!selectedDocumentId && (
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                    <p className="text-sm text-blue-400 flex items-center gap-2">
+                      <Scale className="h-4 w-4" />
+                      Analysis based on the Constitution of India and established legal precedents
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </Card>
