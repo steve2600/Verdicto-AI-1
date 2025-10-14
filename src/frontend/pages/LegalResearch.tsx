@@ -44,40 +44,28 @@ export default function LegalResearch() {
     try {
       const term = searchTerm.trim();
 
-      // Title/metadata search via Convex (fast and reliable for headings)
-      const titleMatches: any[] = await convex.query(
-        api.legalResearch.searchByTitleInternal,
-        { query: term }
-      );
-      // Respect selected jurisdiction filter
+      // Use semantic search action that combines title + RAG content search
+      const results = await convex.action((api as any).legalResearch.semanticSearch, {
+        query: term,
+        limit: 20,
+      });
+
+      // Apply jurisdiction filter
       const filtered = selectedJurisdiction === "all"
-        ? titleMatches
-        : (titleMatches || []).filter((m: any) => m.document?.jurisdiction === selectedJurisdiction);
+        ? results
+        : results.filter((r: any) => r.document?.jurisdiction === selectedJurisdiction);
 
       setSearchResults(filtered);
 
-      if ((filtered || []).length === 0) {
+      if (filtered.length === 0) {
         toast.info("No documents found matching your search");
       } else {
         toast.success(`Found ${filtered.length} relevant document${filtered.length > 1 ? "s" : ""}`);
       }
     } catch (error) {
       console.error("Search error:", error);
-
-      // Fallback: try local title matches only
-      const lower = searchTerm.trim().toLowerCase();
-      const localOnly: any[] = (allDocuments || []).filter((d: any) => {
-        const inTitle = (d.title || "").toLowerCase().includes(lower);
-        const jurisdictionOk = selectedJurisdiction === "all" ? true : d.jurisdiction === selectedJurisdiction;
-        return inTitle && jurisdictionOk;
-      });
-      setSearchResults(localOnly);
-      if (localOnly.length > 0) {
-        toast.success(`Found ${localOnly.length} document${localOnly.length > 1 ? "s" : ""} by title`);
-      } else {
-        toast.error("Search failed. Please try again.");
-        setShowResults(false);
-      }
+      toast.error("Search failed. Please try again.");
+      setShowResults(false);
     } finally {
       setIsSearching(false);
     }
