@@ -29,9 +29,14 @@ export default function LegalResearch() {
   const navigate = useNavigate();
   const convex = useConvex();
 
+  // Get filtered documents for browsing (respects jurisdiction filter)
   const allDocuments = useQuery(api.legalResearch.listProcessedDocuments, {
     jurisdiction: selectedJurisdiction === "all" ? undefined : selectedJurisdiction,
   });
+  
+  // Get total statistics (ignores jurisdiction filter - shows ALL research docs)
+  const statsData = useQuery(api.legalResearch.getAllResearchStats, {});
+  
   const jurisdictions = useQuery(api.legalResearch.getJurisdictions, {});
   
   const createDocument = useMutation(api.documents.create);
@@ -198,8 +203,8 @@ export default function LegalResearch() {
   };
 
   const displayDocuments = showResults ? searchResults : [];
-  const totalDocuments = allDocuments?.length || 0;
-  const processedDocuments = allDocuments?.filter((d: any) => d.status === 'processed').length || 0;
+  const totalDocuments = statsData?.total || 0;
+  const processedDocuments = statsData?.processed || 0;
 
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto">
