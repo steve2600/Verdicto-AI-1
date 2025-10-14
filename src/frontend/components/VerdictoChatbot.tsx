@@ -13,32 +13,37 @@ export default function VerdictoChatbot() {
   const { messages, isLoading, sendMessage } = useVerdictoChat();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Robust auto-scroll mechanism that targets the actual scrollable viewport
+  // Enhanced auto-scroll mechanism for long responses
   useEffect(() => {
     if (!scrollAreaRef.current) return;
 
     const scrollToBottom = () => {
-      // Target the nested viewport element that Radix UI creates
       const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
       if (viewport) {
-        // Directly set scrollTop to scrollHeight for immediate scroll
         viewport.scrollTop = viewport.scrollHeight;
       }
     };
 
-    // Multiple scroll attempts for maximum reliability
+    // Immediate scroll
     scrollToBottom();
     
-    // Use double requestAnimationFrame for better DOM synchronization
+    // Multiple delayed attempts to handle dynamic content loading
     requestAnimationFrame(() => {
-      requestAnimationFrame(scrollToBottom);
+      requestAnimationFrame(() => {
+        scrollToBottom();
+      });
     });
     
-    // Final fallback with setTimeout
-    const timer = setTimeout(scrollToBottom, 100);
+    const timer1 = setTimeout(scrollToBottom, 50);
+    const timer2 = setTimeout(scrollToBottom, 150);
+    const timer3 = setTimeout(scrollToBottom, 300);
 
-    return () => clearTimeout(timer);
-  }, [messages.length, isLoading]);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+    };
+  }, [messages, isLoading]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
