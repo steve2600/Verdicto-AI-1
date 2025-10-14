@@ -1005,6 +1005,23 @@ Please analyze this modified case and provide a prediction.`;
                     </Label>
                   </div>
 
+                  <div className="mt-4">
+                    <Label className="text-sm font-medium mb-2 block">
+                      Custom Scenario Modifications
+                    </Label>
+                    <Textarea
+                      placeholder="Describe any custom modifications to the case scenario (e.g., 'Add character witness testimony', 'Change jurisdiction to Mumbai', 'Include medical evidence')..."
+                      value={modifications.custom_text || ""}
+                      onChange={(e) => 
+                        setModifications({...modifications, custom_text: e.target.value})
+                      }
+                      className="min-h-[100px] macos-vibrancy resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Enter any additional modifications not covered by the checkboxes above
+                    </p>
+                  </div>
+
                   <Button 
                     onClick={handleSimulate} 
                     className="w-full neon-glow"
