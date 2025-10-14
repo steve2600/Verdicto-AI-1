@@ -28,7 +28,7 @@ export function useVerdictoChat() {
 
     try {
       // Use Groq API directly for conversational chat
-      const GROQ_API_KEY = "gsk_qlxqJXxqPqLqxqxqxqxqWGdyb3FYxqxqxqxqxqxqxqxqxqxq"; // You'll need to set this
+      const GROQ_API_KEY = "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";
       
       // Build conversation history for context
       const conversationHistory = [
