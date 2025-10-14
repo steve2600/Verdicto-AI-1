@@ -189,26 +189,10 @@ export const analyzeQuery = action({
       
       if (args.userMode === "citizen") {
         // Citizen Mode: Simple, plain language with strict constraints
-        enhancedQuery = `${args.queryText}
-
-IMPORTANT: Provide your response in CITIZEN MODE following these strict rules:
-1. Use ONLY 2 sentences maximum
-2. Use simple, everyday language that anyone can understand
-3. Avoid ALL legal jargon and technical terms
-4. Minimize or avoid numbers and percentages
-5. Explain like you're talking to someone with no legal background
-6. Be direct and clear about the likely outcome`;
+        enhancedQuery = `${args.queryText}\n\nIMPORTANT: Provide your response in CITIZEN MODE following these strict rules:\n1. Use ONLY 2 sentences maximum\n2. Use simple, everyday language that anyone can understand\n3. Avoid ALL legal jargon and technical terms\n4. Minimize or avoid numbers and percentages\n5. Explain like you're talking to someone with no legal background\n6. Be direct and clear about the likely outcome`;
       } else {
         // Lawyer Mode: Technical, detailed legal analysis
-        enhancedQuery = `${args.queryText}
-
-IMPORTANT: Provide your response in LAWYER MODE following these guidelines:
-1. Use precise legal terminology and cite relevant laws/sections
-2. Provide detailed legal reasoning with multiple factors
-3. Include specific legal precedents and case references where applicable
-4. Use technical language appropriate for legal professionals
-5. Provide comprehensive analysis with supporting evidence
-6. Include confidence indicators based on legal precedents`;
+        enhancedQuery = `${args.queryText}\n\nIMPORTANT: Provide your response in LAWYER MODE following these guidelines:\n1. Use precise legal terminology and cite relevant laws/sections\n2. Provide detailed legal reasoning with multiple factors\n3. Include specific legal precedents and case references where applicable\n4. Use technical language appropriate for legal professionals\n5. Provide comprehensive analysis with supporting evidence\n6. Include confidence indicators based on legal precedents`;
       }
 
       // Send to RAG backend for analysis using dedicated query endpoint
@@ -234,14 +218,15 @@ IMPORTANT: Provide your response in LAWYER MODE following these guidelines:
       const ragResponse = result.answer || "No response generated";
       const ragSources = result.sources || [];
       
-      // Calculate dynamic confidence based on response quality
-      let confidence = 0.5; // Base confidence
+      // Calculate base confidence from response quality (20% total weight)
+      let baseConfidence = 0.15; // Starting point
       
+      // Response quality factors (contribute up to 0.05 total)
       if (ragResponse && ragResponse.length > 100) {
-        confidence += 0.1;
+        baseConfidence += 0.02;
       }
       if (ragResponse && ragResponse.length > 300) {
-        confidence += 0.1;
+        baseConfidence += 0.02;
       }
       
       const legalTerms = ['section', 'act', 'court', 'case', 'law', 'legal', 'pursuant', 'hereby', 'whereas'];
@@ -250,16 +235,47 @@ IMPORTANT: Provide your response in LAWYER MODE following these guidelines:
       ).length;
       
       if (termsFound >= 3) {
-        confidence += 0.15;
+        baseConfidence += 0.03;
       } else if (termsFound >= 1) {
-        confidence += 0.05;
+        baseConfidence += 0.01;
       }
       
       if (ragSources.length > 0) {
-        confidence += 0.1;
+        baseConfidence += 0.02;
       }
       
-      confidence = Math.min(confidence, 0.95);
+      // Now fetch bias analysis from ML backend (80% weight)
+      let biasImpact = 0.05; // Default fallback if bias analysis fails
+      
+      try {
+        const ML_API_URL = process.env.ML_API_URL || "https://a-i-c-a-verdicto-ml.hf.space/";
+        const biasResponse = await fetch(`${ML_API_URL}/api/v1/analyze/comprehensive`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text: ragResponse,
+          }),
+        });
+
+        if (biasResponse.ok) {
+          const biasData = await biasResponse.json();
+          const biasScore = biasData.overall_bias_score || 0.5;
+          
+          // Bias impact now has 80% weight (up to 0.8 points)
+          // Lower bias = higher confidence boost
+          biasImpact = (1 - biasScore) * 0.8;
+        }
+      } catch (error) {
+        console.warn("Bias analysis failed, using default bias impact:", error);
+        // Default bias impact of 0.05 if analysis fails
+      }
+      
+      // Final confidence: base (20%) + bias impact (80%)
+      let confidence = baseConfidence + biasImpact;
+      confidence = Math.min(confidence, 0.95); // Cap at 0.95
+      confidence = Math.max(confidence, 0.15); // Floor at 0.15
 
       // Create prediction in Convex with RAG results
       const predictionId: any = await ctx.runMutation(internal.predictions.createFromRAG, {
