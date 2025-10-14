@@ -525,9 +525,30 @@ RISK ASSESSMENT: [Details]`;
               {verdictAnalysis ? (
                 <div className="space-y-4">
                   <div className="bg-primary/10 p-4 rounded-lg border border-primary/20">
-                    <Badge variant="secondary" className="mb-2">
-                      {verdictAnalysis.mode === "judge" ? "Judge Mode Analysis" : "Query Mode Analysis"}
-                    </Badge>
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge variant="secondary" className="mb-2">
+                        {verdictAnalysis.mode === "judge" ? "Judge Mode Analysis" : "Query Mode Analysis"}
+                      </Badge>
+                      <Button
+                        onClick={generateVerdictAnalysis}
+                        disabled={isGeneratingAnalysis}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                      >
+                        {isGeneratingAnalysis ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Reanalyzing...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4" />
+                            Reanalyze
+                          </>
+                        )}
+                      </Button>
+                    </div>
                     <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
                       {verdictAnalysis.rawResponse}
                     </div>
