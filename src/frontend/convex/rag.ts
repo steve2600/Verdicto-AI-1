@@ -75,6 +75,92 @@ export const processDocument = action({
 });
 
 /**
+ * Bulk ingest multiple documents for Legal Research
+ */
+export const bulkIngestDocuments = action({
+  args: {
+    documents: v.array(v.object({
+      documentId: v.id("documents"),
+      fileUrl: v.id("_storage"),
+      title: v.string(),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const results = [];
+    
+    for (const doc of args.documents) {
+      try {
+        // Update document status to processing
+        await ctx.runMutation(internal.documents.updateStatus, {
+          documentId: doc.documentId,
+          status: "processing",
+        });
+
+        // Get the actual URL from Convex storage
+        const actualFileUrl = await ctx.storage.getUrl(doc.fileUrl);
+        
+        if (!actualFileUrl) {
+          throw new Error(`Failed to get file URL for ${doc.title}`);
+        }
+
+        // Use dedicated ingest endpoint
+        const response = await fetch(`${RAG_BACKEND_URL}/api/v1/documents/ingest`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer 8ad62148045cbf8137a66e1d8c0974e14f62a970b4fa91afb850f461abfbadb8",
+          },
+          body: JSON.stringify({
+            document_url: actualFileUrl,
+            document_id: doc.documentId,
+            title: doc.title,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`RAG backend error: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        // Update document status to processed
+        await ctx.runMutation(internal.documents.updateStatus, {
+          documentId: doc.documentId,
+          status: "processed",
+        });
+
+        results.push({
+          documentId: doc.documentId,
+          title: doc.title,
+          success: true,
+          chunks: result.chunks_processed || 0,
+        });
+      } catch (error) {
+        // Update document status to failed
+        await ctx.runMutation(internal.documents.updateStatus, {
+          documentId: doc.documentId,
+          status: "failed",
+        });
+
+        results.push({
+          documentId: doc.documentId,
+          title: doc.title,
+          success: false,
+          error: String(error),
+        });
+      }
+    }
+
+    return {
+      total: args.documents.length,
+      successful: results.filter(r => r.success).length,
+      failed: results.filter(r => !r.success).length,
+      results,
+    };
+  },
+});
+
+/**
  * Send query to RAG backend for analysis using dedicated query endpoint
  */
 export const analyzeQuery = action({
