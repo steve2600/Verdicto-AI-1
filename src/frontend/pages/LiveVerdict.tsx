@@ -144,63 +144,33 @@ export default function LiveVerdict() {
 
     setIsGeneratingAnalysis(true);
     try {
-      // Upload documents if in query mode
-      // Use Convex Id type for document ids
-      let documentIds: Id<"documents">[] = [];
-      if (analysisMode === "query" && uploadedDocs.length > 0) {
-        toast.info("Uploading and processing documents...");
-        
-        for (const file of uploadedDocs) {
-          const uploadUrl = await generateUploadUrl();
-          const uploadResponse = await fetch(uploadUrl, {
-            method: "POST",
-            headers: { "Content-Type": file.type },
-            body: file,
-          });
-
-          if (uploadResponse.ok) {
-            const { storageId } = await uploadResponse.json();
-            const documentId = await createDocument({
-              title: file.name.replace(".pdf", ""),
-              jurisdiction: "General",
-              documentType: "library",
-              fileId: storageId,
-              metadata: {
-                documentType: "Legal Document",
-                version: "1.0",
-                fileSize: file.size,
-              },
-            });
-
-            await processDocumentWithRAG({
-              documentId,
-              fileUrl: storageId,
-              title: file.name.replace(".pdf", ""),
-            });
-
-            documentIds.push(documentId);
-          }
-        }
-      }
-
+      // For Live Verdict, we DON'T require document uploads
+      // The LLM uses the Constitution of India and its broader legal knowledge
+      
       // Create query with mode-specific prompt
       let enhancedPrompt = "";
       
       if (analysisMode === "judge") {
-        enhancedPrompt = `You are an AI legal assistant specialized in Indian law and the Constitution of India. Analyze the following court proceedings transcript and provide:
+        enhancedPrompt = `You are an AI legal assistant with comprehensive knowledge of Indian law, the Constitution of India, and access to legal precedents. Analyze the following court proceedings transcript and provide:
+
+**IMPORTANT**: Base your analysis on:
+- The Constitution of India (your primary reference)
+- Indian Penal Code (IPC) and other relevant statutes
+- Landmark Supreme Court and High Court judgments
+- Established legal principles and precedents
 
 1. **Case Type Detection**: Automatically determine if this is a criminal or civil case
 2. **Verdict Determination**: Based on the proceedings and similar Indian legal precedents, determine if the defendant is:
    - Guilty or Not Guilty (for criminal cases)
    - Liable or Not Liable (for civil cases)
 3. **Sentencing Recommendation**: If guilty/liable, recommend:
-   - Imprisonment duration (for criminal cases)
-   - Compensation/damages (for civil cases)
+   - Imprisonment duration with specific IPC sections (for criminal cases)
+   - Compensation/damages with legal basis (for civil cases)
 4. **Legal Basis**: Cite specific:
+   - Articles of the Constitution of India
    - IPC sections (for criminal cases)
    - Relevant civil law provisions
-   - Constitutional articles
-   - Landmark Supreme Court or High Court cases
+   - Landmark Supreme Court or High Court cases with case names
 
 **Transcript:**
 ${textToAnalyze}
@@ -208,42 +178,50 @@ ${textToAnalyze}
 **Format your response as:**
 CASE TYPE: [Criminal/Civil]
 VERDICT: [Guilty/Not Guilty or Liable/Not Liable]
-SENTENCING: [Details]
-LEGAL BASIS: [Citations]
+SENTENCING: [Details with legal references]
+LEGAL BASIS: [Constitutional articles, IPC sections, landmark cases]
 CONFIDENCE: [Percentage based on precedents]`;
       } else {
-        enhancedPrompt = `You are an AI legal assistant specialized in Indian law and the Constitution of India. A user has asked the following legal question:
+        enhancedPrompt = `You are an AI legal assistant with comprehensive knowledge of Indian law, the Constitution of India, and access to legal precedents. A user has asked the following legal question:
+
+**IMPORTANT**: Base your analysis on:
+- The Constitution of India (your primary reference)
+- Indian Penal Code (IPC) and other relevant statutes
+- Landmark Supreme Court and High Court judgments
+- Established legal principles and precedents
 
 **Question:** ${textToAnalyze}
 
-Based on similar cases in Indian legal history, provide:
+Based on similar cases in Indian legal history and constitutional provisions, provide:
 
-1. **Win Probability**: Calculate the percentage chance of winning this case
-2. **Similar Precedents**: List 3-5 similar cases with outcomes
-3. **Legal Strategy**: Recommend the best legal approach
+1. **Win Probability**: Calculate the percentage chance of winning this case based on precedents
+2. **Similar Precedents**: List 3-5 similar cases with outcomes and citations
+3. **Legal Strategy**: Recommend the best legal approach based on successful cases
 4. **Relevant Laws**: Cite:
-   - Applicable IPC sections or civil law provisions
-   - Constitutional articles
+   - Applicable Constitutional articles
+   - IPC sections or civil law provisions
    - Landmark cases (with case names and citations)
-5. **Risk Assessment**: Potential challenges and how to address them
+5. **Risk Assessment**: Potential challenges and how to address them based on case law
 
 **Format your response as:**
 WIN PROBABILITY: [Percentage]
 SIMILAR CASES: [List with citations]
 LEGAL STRATEGY: [Recommendations]
-RELEVANT LAWS: [Citations]
+RELEVANT LAWS: [Constitutional articles, IPC sections, landmark cases]
 RISK ASSESSMENT: [Details]`;
       }
 
-      // Create a minimal query record; extra fields aren't supported in current schema
+      // Create a minimal query record
       const queryId = await createQuery({
         queryText: enhancedPrompt,
       });
 
+      // For Live Verdict, we explicitly pass NO documentIds
+      // This allows the RAG backend to use its full knowledge base
       const result = await analyzeWithRAG({
         queryId,
         queryText: enhancedPrompt,
-        documentIds: documentIds.length > 0 ? documentIds : undefined,
+        documentIds: undefined, // No document restriction for Live Verdict
         userMode: "lawyer",
       });
 
@@ -406,36 +384,14 @@ RISK ASSESSMENT: [Details]`;
                   placeholder="Enter your legal question (e.g., 'I am a poor farmer and the government wants to take my land. What is the probability of winning if I file a case?')"
                   value={queryText}
                   onChange={(e) => setQueryText(e.target.value)}
-                  className="min-h-[200px] macos-vibrancy"
+                  className="min-h-[300px] macos-vibrancy"
                 />
                 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Upload Relevant Documents (Optional)</label>
-                  <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                    <input
-                      type="file"
-                      accept="application/pdf"
-                      multiple
-                      onChange={handleFileUpload}
-                      className="hidden"
-                      id="query-docs"
-                    />
-                    <label htmlFor="query-docs" className="cursor-pointer">
-                      <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">
-                        Click to upload PDFs (Max 10MB each)
-                      </p>
-                    </label>
-                  </div>
-                  {uploadedDocs.length > 0 && (
-                    <div className="space-y-1">
-                      {uploadedDocs.map((doc, idx) => (
-                        <Badge key={idx} variant="secondary" className="mr-2">
-                          {doc.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                  <p className="text-sm text-blue-400 flex items-center gap-2">
+                    <Scale className="h-4 w-4" />
+                    Analysis based on the Constitution of India and established legal precedents
+                  </p>
                 </div>
               </div>
             )}
