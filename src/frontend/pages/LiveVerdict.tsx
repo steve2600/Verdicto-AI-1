@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Mic, MicOff, Trash2, FileText } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 export default function LiveVerdict() {
   const [transcript, setTranscript] = useState("");
@@ -98,37 +102,69 @@ export default function LiveVerdict() {
   };
 
   return (
-    <div className="min-h-screen p-4">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Transcription & Analysis</h1>
+    <div className="p-4 lg:p-8 max-w-7xl mx-auto pb-20">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8"
+      >
+        <h1 className="text-4xl md:text-5xl font-light mb-2 text-foreground tracking-tight" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300, letterSpacing: '-0.02em' }}>
+          Live Verdict
+        </h1>
+        <p className="text-muted-foreground font-light" style={{ letterSpacing: '0.01em' }}>
+          Real-time transcription and AI-powered verdict analysis
+        </p>
+      </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Live Transcript</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Live Transcript Section */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card className="macos-card p-6 neon-glow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center neon-glow">
+                  <FileText className="h-5 w-5 text-primary" />
+                </div>
+                <h2 className="text-xl font-medium text-foreground">Live Transcript</h2>
+              </div>
               <div className="flex items-center gap-2">
-                <button
+                <Button
                   onClick={toggleRecording}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    isRecording
-                      ? "bg-red-500 hover:bg-red-600 text-white"
-                      : "bg-green-500 hover:bg-green-600 text-white"
-                  }`}
+                  variant={isRecording ? "destructive" : "default"}
+                  className={isRecording ? "neon-glow animate-pulse" : "neon-glow"}
                 >
-                  {isRecording ? "Stop Proceeding" : "Start Proceeding"}
-                </button>
-                <button
+                  {isRecording ? (
+                    <>
+                      <MicOff className="h-4 w-4 mr-2" />
+                      Stop Proceeding
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="h-4 w-4 mr-2" />
+                      Start Proceeding
+                    </>
+                  )}
+                </Button>
+                <Button
                   onClick={clearTranscript}
-                  className="px-4 py-2 rounded-lg font-medium transition-colors bg-gray-200 dark:bg-zinc-700 text-foreground"
+                  variant="outline"
+                  className="macos-vibrancy"
                 >
+                  <Trash2 className="h-4 w-4 mr-2" />
                   Clear
-                </button>
+                </Button>
               </div>
             </div>
 
-            <div className="min-h-[400px] max-h-[600px] overflow-y-auto p-4 rounded-lg bg-muted/50 border border-border">
+            <Separator className="my-4" />
+
+            <div className="min-h-[400px] max-h-[600px] overflow-y-auto p-4 rounded-lg macos-vibrancy border border-border">
               {transcript || liveWords.length > 0 ? (
-                <div className="text-foreground whitespace-pre-wrap leading-relaxed">
+                <div className="text-foreground whitespace-pre-wrap leading-relaxed font-light" style={{ fontFamily: "'Inter', sans-serif" }}>
                   <span>{transcript}</span>
                   {liveWords.length > 0 && (
                     <span className="inline-flex flex-wrap gap-1">
@@ -138,7 +174,7 @@ export default function LiveVerdict() {
                           initial={{ opacity: 0, y: 5 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.15, delay: idx * 0.05 }}
-                          className="text-muted-foreground italic"
+                          className="text-primary italic font-medium"
                         >
                           {word}
                         </motion.span>
@@ -147,26 +183,53 @@ export default function LiveVerdict() {
                   )}
                 </div>
               ) : (
-                <p className="text-muted-foreground text-center">
-                  Click "Start Proceeding" to begin transcription...
-                </p>
+                <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 neon-glow">
+                    <Mic className="h-8 w-8 text-primary" />
+                  </div>
+                  <p className="text-muted-foreground font-light">
+                    Click "Start Proceeding" to begin transcription...
+                  </p>
+                </div>
               )}
             </div>
-          </div>
+          </Card>
+        </motion.div>
 
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Verdict Analysis</h2>
-            <div className="p-4 rounded-lg bg-muted/50 border border-border">
+        {/* Verdict Analysis Section */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="macos-card p-6 neon-glow">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center neon-glow">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <h2 className="text-xl font-medium text-foreground">Verdict Analysis</h2>
+            </div>
+
+            <Separator className="my-4" />
+
+            <div className="min-h-[400px] p-4 rounded-lg macos-vibrancy border border-border">
               {verdictAnalysis ? (
-                <pre className="text-sm text-muted-foreground whitespace-pre-wrap">
+                <pre className="text-sm text-foreground whitespace-pre-wrap font-light" style={{ fontFamily: "'Inter', sans-serif" }}>
                   {JSON.stringify(verdictAnalysis, null, 2)}
                 </pre>
               ) : (
-                <p className="text-muted-foreground text-center">No analysis yet</p>
+                <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 neon-glow">
+                    <FileText className="h-8 w-8 text-primary" />
+                  </div>
+                  <p className="text-muted-foreground font-light">
+                    No analysis yet. Start recording to generate verdict analysis.
+                  </p>
+                </div>
               )}
             </div>
-          </div>
-        </div>
+          </Card>
+        </motion.div>
       </div>
     </div>
   );
