@@ -53,7 +53,7 @@ export default function Dashboard() {
         <div className="p-6 border-b border-border">
           <div className="flex items-center gap-3">
             <LogoDropdown />
-            <h1 className="text-2xl font-light tracking-tight text-foreground">LexAI UI</h1>
+            <h1 className="text-2xl font-light tracking-tight text-foreground">Verdicto-AI</h1>
           </div>
         </div>
 
