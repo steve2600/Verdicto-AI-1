@@ -30,14 +30,14 @@ export default function LegalResearch() {
   const convex = useConvex();
 
   // Get filtered documents for browsing (respects jurisdiction filter)
-  const allDocuments = useQuery(api.legalResearch.listProcessedDocuments, {
+  const allDocuments = useQuery(api.lr.listProcessedDocuments, {
     jurisdiction: selectedJurisdiction === "all" ? undefined : selectedJurisdiction,
   });
   
   // Get total statistics (ignores jurisdiction filter - shows ALL research docs)
-  const statsData = useQuery(api.legalResearch.getAllResearchStats, {});
+  const statsData = useQuery(api.lr.getAllResearchStats, {});
   
-  const jurisdictions = useQuery(api.legalResearch.getJurisdictions, {});
+  const jurisdictions = useQuery(api.lr.getJurisdictions, {});
   
   const createDocument = useMutation(api.documents.create);
   const generateUploadUrl = useMutation(api.documents.generateUploadUrl);
