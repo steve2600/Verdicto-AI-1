@@ -418,6 +418,12 @@ Provide a professional legal analysis based on:
 
 Answer in 3-4 sentences with specific legal references where applicable."""
             
+    except Exception as e:
+        print(f"Query error: {str(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
+=======
             answer = llm.invoke(prompt).content
             
             return {
@@ -428,6 +434,12 @@ Answer in 3-4 sentences with specific legal references where applicable."""
                 "chunks_used": 0,
                 "sources": []
             }
+
+    except Exception as e:
+        print(f"Query error: {str(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
 =======
 
     except Exception as e:
