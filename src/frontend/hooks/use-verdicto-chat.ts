@@ -27,28 +27,45 @@ export function useVerdictoChat() {
     setError(null);
 
     try {
-      // Use the RAG backend for legal assistance
-      const RAG_BACKEND_URL = import.meta.env.VITE_RAG_BACKEND_URL || "https://verdicto-ai-1-production-3dbc.up.railway.app";
-      const TEAM_TOKEN = "8ad62148045cbf8137a66e1d8c0974e14f62a970b4fa91afb850f461abfbadb8";
+      // Use Groq API directly for conversational chat
+      const GROQ_API_KEY = "gsk_qlxqJXxqPqLqxqxqxqxqWGdyb3FYxqxqxqxqxqxqxqxqxqxq"; // You'll need to set this
+      
+      // Build conversation history for context
+      const conversationHistory = [
+        {
+          role: "system",
+          content: "You are Verdicto Legal Assistant, an AI legal expert powered by Llama 3.1 8B Instant. You provide helpful, accurate legal information and guidance. Be professional, clear, and concise in your responses."
+        },
+        ...messages.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        })),
+        {
+          role: "user",
+          content: userMessage
+        }
+      ];
 
-      const response = await fetch(`${RAG_BACKEND_URL}/api/v1/documents/query`, {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${TEAM_TOKEN}`,
+          "Authorization": `Bearer ${GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          query: userMessage,
-          document_id: null, // General legal query without specific document
+          model: "llama-3.1-8b-instant",
+          messages: conversationHistory,
+          temperature: 0.7,
+          max_tokens: 1024,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`RAG backend error: ${response.status}`);
+        throw new Error(`Groq API error: ${response.status}`);
       }
 
       const data = await response.json();
-      const assistantContent = data.answer || "I apologize, but I couldn't generate a response.";
+      const assistantContent = data.choices?.[0]?.message?.content || "I apologize, but I couldn't generate a response.";
 
       const assistantMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
