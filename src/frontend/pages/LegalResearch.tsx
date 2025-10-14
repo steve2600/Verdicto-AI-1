@@ -49,8 +49,8 @@ export default function LegalResearch() {
     try {
       const term = searchTerm.trim();
 
-      // Use semantic search action that combines title + RAG content search
-      const results = await convex.action((api as any).legalResearch.semanticSearch, {
+      // Use semantic search action from legalResearch module
+      const results = await convex.action(api.legalResearch.semanticSearch, {
         query: term,
         limit: 20,
       });
