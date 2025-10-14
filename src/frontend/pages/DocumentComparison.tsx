@@ -21,13 +21,14 @@ type Conflict = {
 export default function DocumentComparison() {
   const documents = useQuery(api.documents.list, {});
   const comparisons = useQuery(api.comparison.getUserComparisons) as any[] | undefined;
+
   const compareDocuments = useAction(api.comparison.compareDocuments);
   const deleteComparison = useMutation(api.comparison.deleteComparison);
 
   const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
 
-  const processedDocs = documents?.filter(doc => doc.status === "processed") || [];
+  const processedDocs = documents?.filter((doc) => doc.status === "processed") || [];
 
   const toggleDocSelection = (docId: string) => {
     const newSet = new Set(selectedDocIds);
@@ -106,15 +107,9 @@ export default function DocumentComparison() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-medium text-foreground">Select Documents to Compare</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Choose 2-5 processed documents ({selectedDocIds.size} selected)
-            </p>
+            <p className="text-sm text-muted-foreground mt-1">Choose 2-5 processed documents ({selectedDocIds.size} selected)</p>
           </div>
-          <Button
-            onClick={handleCompare}
-            disabled={submitting || selectedDocIds.size < 2 || selectedDocIds.size > 5}
-            className="gap-2"
-          >
+          <Button onClick={handleCompare} disabled={submitting || selectedDocIds.size < 2 || selectedDocIds.size > 5} className="gap-2">
             {submitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -195,9 +190,7 @@ export default function DocumentComparison() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <FileText className="h-4 w-4 flex-shrink-0 text-primary" />
-                      <span className="font-medium text-foreground truncate">
-                        {(comp.documentTitles || []).join(" • ")}
-                      </span>
+                      <span className="font-medium text-foreground truncate">{(comp.documentTitles || []).join(" • ")}</span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span>{new Date(comp.comparisonDate).toLocaleString()}</span>
@@ -207,6 +200,7 @@ export default function DocumentComparison() {
                       </Badge>
                     </div>
                   </div>
+
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <div className="text-right">
                       <div className="text-xs text-muted-foreground mb-1">Risk Score</div>
@@ -224,12 +218,7 @@ export default function DocumentComparison() {
                         {comp.overallRiskScore ?? 0}
                       </Badge>
                     </div>
-                    <Button
-                      onClick={() => handleDelete(comp._id)}
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                    >
+                    <Button onClick={() => handleDelete(comp._id)} variant="outline" size="sm" className="gap-2">
                       Delete
                     </Button>
                   </div>
@@ -240,26 +229,28 @@ export default function DocumentComparison() {
                     <div className="text-sm font-medium text-foreground mb-2">
                       {comp.conflicts.length} Conflict{comp.conflicts.length !== 1 ? "s" : ""} Detected
                     </div>
+
                     {comp.conflicts.map((c: Conflict, idx: number) => (
                       <div key={idx} className="rounded-lg border border-border bg-muted/30 p-3">
                         <div className="flex items-start gap-2 mb-2">
                           <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5 text-orange-500" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm font-medium text-foreground capitalize">
-                                {c.type.replace(/_/g, " ")}
-                              </span>
+                              <span className="text-sm font-medium text-foreground capitalize">{c.type.replace(/_/g, " ")}</span>
                               <Badge className={getSeverityColor(c.severity)} variant="outline">
                                 {c.severity}
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground">{c.description}</p>
+
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">{c.description}</p>
+
                             {Array.isArray(c.affectedDocuments) && c.affectedDocuments.length > 0 && (
                               <div className="mt-2 text-xs text-muted-foreground">
                                 Affects {c.affectedDocuments.length} document(s)
                                 {c.affectedDocuments[0]?.page && ` • Page ${c.affectedDocuments[0].page}`}
                               </div>
                             )}
+
                             {c.recommendation && (
                               <div className="mt-2 text-xs text-primary">
                                 💡 {c.recommendation}
@@ -271,9 +262,7 @@ export default function DocumentComparison() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-sm text-muted-foreground mt-3">
-                    No detailed conflicts detected
-                  </div>
+                  <div className="text-sm text-muted-foreground mt-3">No detailed conflicts detected</div>
                 )}
               </Card>
             ))}
