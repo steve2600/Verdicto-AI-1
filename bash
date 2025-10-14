@@ -1,1 +1,3 @@
-uvicorn app.main:app --host 0.0.0.0 --port $PORT
+cd scripts
+npm install
+CASES_FOLDER="/path/to/your/legal-cases" npm run ingest
