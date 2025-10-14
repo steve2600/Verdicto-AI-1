@@ -70,10 +70,10 @@ export default function DocumentComparison() {
   const handleDelete = async (id: Id<"documentComparisons">) => {
     try {
       await deleteComparison({ comparisonId: id });
-      toast.success("Comparison deleted");
-    } catch (e) {
-      console.error(e);
-      toast.error("Delete failed.");
+      toast.success("Comparison deleted successfully");
+    } catch (e: any) {
+      console.error("Delete error:", e);
+      toast.error(e?.message || "Failed to delete comparison");
     }
   };
 
