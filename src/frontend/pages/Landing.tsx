@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { VerdictoChatbot } from "@/components/VerdictoChatbot";
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -54,6 +55,9 @@ export default function Landing() {
       <div className="fixed top-6 right-6 z-50">
         <ThemeToggle />
       </div>
+
+      {/* Verdicto Chatbot */}
+      <VerdictoChatbot />
 
       {/* Animated Background Paths */}
       <div className="fixed inset-0 w-full h-full" style={{ zIndex: 0 }}>

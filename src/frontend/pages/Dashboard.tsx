@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { VerdictoChatbot } from "@/components/VerdictoChatbot";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -70,6 +71,9 @@ export default function Dashboard() {
       <div className="fixed top-6 right-6 z-50">
         <ThemeToggle />
       </div>
+
+      {/* Verdicto Chatbot floating button and panel */}
+      <VerdictoChatbot />
 
       {/* Sidebar */}
       <motion.aside
