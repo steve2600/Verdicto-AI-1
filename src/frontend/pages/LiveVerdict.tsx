@@ -1,27 +1,45 @@
-import { useState, useEffect } from "react";
-import { toast } from "react-toastify";
-import { motion } from "framer-motion";
+import React, { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
-const [transcript, setTranscript] = useState("");
-const [recognition, setRecognition] = useState<any>(null);
-const [isAnalyzing, setIsAnalyzing] = useState(false);
-const [isGeneratingNotes, setIsGeneratingNotes] = useState(false);
-const [verdictAnalysis, setVerdictAnalysis] = useState<any>(null);
-const [generatedNotes, setGeneratedNotes] = useState<any>(null);
-const [interimTranscript, setInterimTranscript] = useState("");
-const [liveWords, setLiveWords] = useState<string[]>([]);
+// SpeechRecognition helper
+function getSpeechRecognition(): any {
+  const w = window as any;
+  return w.SpeechRecognition || w.webkitSpeechRecognition || null;
+}
 
-// ... rest of the component
+type VerdictAnalysis = {
+  verdict?: string;
+  conclusion?: string;
+  punishment?: string;
+  confidence?: number;
+} | null;
 
-useEffect(() => {
-  if (recognitionInstance) {
-    recognitionInstance.onresult = (event: any) => {
-      // Replace the onresult handler to stream words and commit finalized sentences
+export default function LiveVerdict() {
+  const [isSupported, setIsSupported] = useState<boolean>(true);
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [transcript, setTranscript] = useState<string>("");
+  const [liveWords, setLiveWords] = useState<string[]>([]);
+  const recognitionRef = useRef<any>(null);
+
+  const [verdictAnalysis, setVerdictAnalysis] = useState<VerdictAnalysis>(null);
+
+  useEffect(() => {
+    const Recognition = getSpeechRecognition();
+    if (!Recognition) {
+      setIsSupported(false);
+      return;
+    }
+    const recognition = new Recognition();
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    recognition.lang = "en-IN";
+
+    recognition.onresult = (event: any) => {
       let interim = "";
       let finalized = "";
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const part = event.results[i][0].transcript;
+        const part = event.results[i][0]?.transcript ?? "";
         if (event.results[i].isFinal) {
           finalized += part + " ";
         } else {
@@ -29,126 +47,165 @@ useEffect(() => {
         }
       }
 
-      // Commit finalized sentence(s) when silence detected
       if (finalized) {
-        setTranscript((prev) => prev + finalized);
-        setLiveWords([]); // clear live words once sentence finalizes
+        setTranscript((prev) => (prev ? prev + finalized : finalized));
+        setLiveWords([]);
       }
 
-      // Update interim streaming words
       if (interim) {
-        const words = interim.trim().split(/\s+/);
+        const words = interim.trim().split(/\s+/).filter(Boolean);
         setLiveWords(words);
-        setInterimTranscript(interim);
       } else {
         setLiveWords([]);
-        setInterimTranscript("");
       }
     };
-  }
-}, [recognitionInstance]);
 
-// ... rest of the component
+    recognition.onend = () => {
+      if (isRecording) {
+        try {
+          recognition.start();
+        } catch {
+          // ignore restart errors
+        }
+      }
+    };
 
-const toggleRecording = () => {
-  if (isRecording) {
+    recognition.onerror = () => {
+      // Stop on error
+      setIsRecording(false);
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      try {
+        recognition.stop();
+      } catch {}
+      recognitionRef.current = null;
+    };
+  }, [isRecording]);
+
+  const startProceeding = () => {
+    if (!isSupported || !recognitionRef.current) return;
     setTranscript("");
-    setInterimTranscript("");
-    setLiveWords([]); // reset live words on new session
+    setLiveWords([]);
     setVerdictAnalysis(null);
-    setGeneratedNotes(null);
-    recognition.stop();
+    try {
+      recognitionRef.current.start();
+      setIsRecording(true);
+    } catch {
+      setIsRecording(false);
+    }
+  };
+
+  const stopProceeding = () => {
+    if (!recognitionRef.current) return;
+    try {
+      recognitionRef.current.stop();
+    } catch {}
     setIsRecording(false);
-    toast.success("Recording stopped");
-  } else {
+  };
+
+  const clearTranscript = () => {
     setTranscript("");
-    setInterimTranscript("");
-    setLiveWords([]); // reset live words on new session
+    setLiveWords([]);
     setVerdictAnalysis(null);
-    setGeneratedNotes(null);
-    recognition.start();
-    setIsRecording(true);
-    toast.success("Recording started");
-  }
-};
+  };
 
-const clearTranscript = () => {
-  setTranscript("");
-  setInterimTranscript("");
-  setLiveWords([]); // reset live words on clear
-  setVerdictAnalysis(null);
-  setGeneratedNotes(null);
-  toast.success("Transcript cleared");
-};
-
-// ... rest of the component
-
-return (
-  <div className="min-h-screen p-4">
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Transcription & Analysis</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Live Transcript</h2>
-            <button 
-              onClick={toggleRecording}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                isRecording 
-                  ? "bg-red-500 hover:bg-red-600 text-white" 
-                  : "bg-green-500 hover:bg-green-600 text-white"
-              }`}
+  return (
+    <div className="min-h-screen p-4 md:p-8">
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground">
+            Live Verdict
+          </h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={clearTranscript}
+              className="h-9 rounded-md px-3 text-sm bg-muted text-foreground hover:bg-muted/80 border border-border"
             >
-              {isRecording ? "Stop" : "Start"}
+              Clear
             </button>
-          </div>
-
-          <div className="min-h-[400px] max-h-[600px] overflow-y-auto p-4 rounded-lg bg-muted/50 border border-border">
-            {/* Replace transcript display to show finalized text + live word-by-word streaming */}
-            {transcript || liveWords.length > 0 ? (
-              <div className="text-foreground whitespace-pre-wrap leading-relaxed">
-                {/* Finalized transcript */}
-                <span>{transcript}</span>
-
-                {/* Live word-by-word streaming */}
-                {liveWords.length > 0 && (
-                  <span className="inline-flex flex-wrap gap-1">
-                    {liveWords.map((word, idx) => (
-                      <motion.span
-                        key={`${idx}-${word}`}
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.15, delay: idx * 0.05 }}
-                        className="text-muted-foreground italic"
-                      >
-                        {word}
-                      </motion.span>
-                    ))}
-                  </span>
-                )}
-              </div>
+            {isRecording ? (
+              <button
+                onClick={stopProceeding}
+                className="h-9 rounded-md px-3 text-sm bg-red-600 text-white hover:bg-red-700 shadow"
+              >
+                Stop Proceeding
+              </button>
             ) : (
-              <p className="text-muted-foreground text-center">
-                Click "Start Proceeding" to begin transcription...
-              </p>
+              <button
+                onClick={startProceeding}
+                disabled={!isSupported}
+                className="h-9 rounded-md px-3 text-sm bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 shadow"
+              >
+                Start Proceeding
+              </button>
             )}
           </div>
         </div>
 
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Verdict Analysis</h2>
-          <div className="p-4 rounded-lg bg-muted/50 border border-border">
-            {verdictAnalysis ? (
-              <pre className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {JSON.stringify(verdictAnalysis, null, 2)}
-              </pre>
-            ) : (
-              <p className="text-muted-foreground text-center">No analysis yet</p>
-            )}
+        {!isSupported && (
+          <div className="text-sm text-amber-500 border border-amber-500/30 bg-amber-500/10 rounded-md p-3">
+            Your browser does not support live speech recognition. Please use
+            Chrome on desktop or Android for the best experience.
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <h2 className="text-lg font-medium text-foreground">
+              Live Transcript
+            </h2>
+            <div className="min-h-[360px] max-h-[560px] overflow-y-auto p-4 rounded-lg bg-muted/40 border border-border">
+              {transcript || liveWords.length > 0 ? (
+                <div className="text-foreground whitespace-pre-wrap leading-relaxed">
+                  <span>{transcript}</span>
+                  <AnimatePresence>
+                    {liveWords.length > 0 && (
+                      <span className="inline-flex flex-wrap gap-1 ml-1">
+                        {liveWords.map((word, idx) => (
+                          <motion.span
+                            key={`${idx}-${word}`}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 0.9, y: 0 }}
+                            exit={{ opacity: 0, y: 6 }}
+                            transition={{ duration: 0.15, delay: idx * 0.03 }}
+                            className="text-muted-foreground italic"
+                          >
+                            {word}
+                          </motion.span>
+                        ))}
+                      </span>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center">
+                  Click "Start Proceeding" to begin transcription...
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="text-lg font-medium text-foreground">
+              Verdict Analysis
+            </h2>
+            <div className="min-h-[180px] p-4 rounded-lg bg-muted/40 border border-border">
+              {verdictAnalysis ? (
+                <pre className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {JSON.stringify(verdictAnalysis, null, 2)}
+                </pre>
+              ) : (
+                <p className="text-muted-foreground text-center">
+                  No analysis yet
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+}

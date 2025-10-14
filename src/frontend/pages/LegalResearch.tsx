@@ -53,10 +53,17 @@ export default function LegalResearch() {
         limit: 20,
       });
       setSearchResults(results);
-      toast.success(`Found ${results.length} relevant documents`);
+      
+      if (results.length === 0) {
+        toast.info("No documents found matching your search");
+      } else {
+        toast.success(`Found ${results.length} relevant documents`);
+      }
     } catch (error) {
       console.error("Search error:", error);
-      toast.error("Search failed");
+      toast.error("Search failed. Please check your connection and try again.");
+      setSearchResults([]);
+      setShowResults(false);
     } finally {
       setIsSearching(false);
     }

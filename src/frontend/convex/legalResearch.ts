@@ -12,9 +12,9 @@ export const semanticSearch = action({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL || "https://verdicto-ai-1-production-3dbc.up.railway.app";
+    
     try {
-      const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL || "https://verdicto-ai-1-production-3dbc.up.railway.app";
-      
       const response = await fetch(`${RAG_BACKEND_URL}/api/v1/documents/search`, {
         method: "POST",
         headers: {
@@ -28,7 +28,9 @@ export const semanticSearch = action({
       });
 
       if (!response.ok) {
-        throw new Error(`RAG backend error: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error("RAG backend error:", response.status, errorText);
+        throw new Error(`Search failed: ${response.status} ${response.statusText}`);
       }
 
       const result = await response.json();
@@ -36,20 +38,28 @@ export const semanticSearch = action({
       // Get document details from Convex for each result
       const documentsWithDetails = await Promise.all(
         (result.results || []).map(async (item: any) => {
-          const doc = await ctx.runQuery(internal.documents.getByIdInternal, {
-            documentId: item.document_id,
-          });
-          return {
-            ...item,
-            document: doc,
-          };
+          try {
+            const doc = await ctx.runQuery(internal.documents.getByIdInternal, {
+              documentId: item.document_id,
+            });
+            return {
+              ...item,
+              document: doc,
+            };
+          } catch (error) {
+            console.error(`Failed to fetch document ${item.document_id}:`, error);
+            return {
+              ...item,
+              document: null,
+            };
+          }
         })
       );
 
-      return documentsWithDetails;
+      return documentsWithDetails.filter(item => item.document !== null);
     } catch (error) {
       console.error("Semantic search error:", error);
-      return [];
+      throw error; // Re-throw to let frontend handle it
     }
   },
 });
