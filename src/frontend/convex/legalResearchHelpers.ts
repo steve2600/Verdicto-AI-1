@@ -3,7 +3,7 @@ import { v } from "convex/values";
 
 /**
  * Internal-only query to search documents by title/metadata.
- * Searches ALL research documents (public database).
+ * Kept fast by first indexing by status=processed, then local scoring by title.
  */
 export const searchByTitleInternal = internalQuery({
   args: {
@@ -12,16 +12,12 @@ export const searchByTitleInternal = internalQuery({
   handler: async (ctx, args) => {
     const searchTerm = args.query.toLowerCase().trim();
 
-    // Get ALL processed research documents (public)
     const documents = await ctx.db
       .query("documents")
       .withIndex("by_status", (q) => q.eq("status", "processed"))
       .collect();
 
-    // Filter to only research documents
-    const researchDocs = documents.filter((d) => d.documentType === "research");
-
-    const matches = researchDocs
+    const matches = documents
       .map((doc) => {
         const title = doc.title.toLowerCase();
         let relevanceScore = 0;

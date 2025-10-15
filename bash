@@ -1,1 +1,1 @@
-node batch-ingest-legal-cases.js
+uvicorn app.main:app --host 0.0.0.0 --port $PORT

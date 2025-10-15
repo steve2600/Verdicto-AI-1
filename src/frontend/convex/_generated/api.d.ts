@@ -26,8 +26,6 @@ import type * as knowledgeGraph from "../knowledgeGraph.js";
 import type * as legalResearch from "../legalResearch.js";
 import type * as legalResearchActions from "../legalResearchActions.js";
 import type * as legalResearchHelpers from "../legalResearchHelpers.js";
-import type * as legalResearchQueries from "../legalResearchQueries.js";
-import type * as lr from "../lr.js";
 import type * as mlBiasAnalysis from "../mlBiasAnalysis.js";
 import type * as predictions from "../predictions.js";
 import type * as queries from "../queries.js";
@@ -59,8 +57,6 @@ declare const fullApi: ApiFromModules<{
   legalResearch: typeof legalResearch;
   legalResearchActions: typeof legalResearchActions;
   legalResearchHelpers: typeof legalResearchHelpers;
-  legalResearchQueries: typeof legalResearchQueries;
-  lr: typeof lr;
   mlBiasAnalysis: typeof mlBiasAnalysis;
   predictions: typeof predictions;
   queries: typeof queries;

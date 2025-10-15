@@ -401,34 +401,15 @@ Provide a professional legal analysis in 3-4 sentences. Focus on relevant legal 
                 }
         
         else:
-            # No document selected - use general legal knowledge base
-            # This allows Judge Mode to work without document constraints
-            # Using Constitution of India and broader legal knowledge
-            llm = get_llm()
-            
-            prompt = f"""You are an AI legal assistant with comprehensive knowledge of Indian law and the Constitution of India.
-
-Question: {request.query}
-
-Provide a professional legal analysis based on:
-- The Constitution of India
-- Indian Penal Code (IPC) and relevant statutes
-- Landmark Supreme Court and High Court judgments
-- Established legal principles and precedents
-
-Answer in 3-4 sentences with specific legal references where applicable."""
-            
-            answer = llm.invoke(prompt).content
-            
+            # No document selected - query across all documents (if any exist)
+            # For now, return a helpful message
             return {
                 "status": "success",
                 "query": request.query,
-                "answer": answer,
+                "answer": "Please select a specific document from your Document Library to get context-aware answers. Without a document selected, I cannot provide accurate legal analysis.",
                 "document_id": None,
-                "chunks_used": 0,
                 "sources": []
             }
-=======
 
     except Exception as e:
         print(f"Query error: {str(e)}")
