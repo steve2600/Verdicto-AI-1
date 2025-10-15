@@ -422,12 +422,16 @@ Answer in 3-4 sentences with specific legal references where applicable."""
             
             return {
                 "status": "success",
+    except Exception as e:
+=======
                 "query": request.query,
                 "answer": answer,
                 "document_id": None,
                 "chunks_used": 0,
                 "sources": []
             }
+
+    except Exception as e:
 =======
 
     except Exception as e:
