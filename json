@@ -1,12 +1,13 @@
 {
-  "status": "success",
-  "query": "...",
-  "answer": "...",
-  "sources": [
-    {
-      "document_id": "...",
-      "page": 5,
-      "content": "excerpt text..."
-    }
-  ]
+  "overall_bias_score": 0.23,
+  "granular_scores": {
+    "gender_bias": 0.12,
+    "caste_bias": 0.45,
+    "religious_bias": 0.08,
+    "regional_bias": 0.15,
+    "socioeconomic_bias": 0.32,
+    "judicial_attitude_bias": 0.18,
+    "language_bias": 0.25
+  },
+  "bias_flags": [...]
 }

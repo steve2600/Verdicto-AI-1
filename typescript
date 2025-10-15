@@ -1,8 +1,24 @@
-// Bias impact calculation (80% weight)
+// Base confidence from response quality (20% weight)
+let baseConfidence = 0.15; // Start at floor
+
+// Response quality factors
+if (answer.length > 100) baseConfidence += 0.05;
+if (answer.includes("Section") || answer.includes("Article")) baseConfidence += 0.03;
+if (answer.includes("precedent") || answer.includes("case")) baseConfidence += 0.02;
+
+// Fetch bias analysis from ML backend
+const biasResponse = await fetch(`${ML_API_URL}/api/v1/analyze/document-bias`, {
+    method: "POST",
+    body: JSON.stringify({ case_text: queryText })
+});
+
+const biasData = await biasResponse.json();
+const biasScore = biasData.results.overall_bias_score;
+
+// Calculate bias impact (80% weight)
 const biasImpact = (1 - biasScore) * 0.8;
 
-// Response quality factors (20% weight)
-const responseQuality = /* various factors */ * 0.2;
-
-// Final confidence
-confidence = baseConfidence + biasImpact + responseQuality;
+// Final confidence calculation
+let confidence = baseConfidence + biasImpact;
+confidence = Math.min(confidence, 0.95); // Cap at 95%
+confidence = Math.max(confidence, 0.15); // Floor at 15%
