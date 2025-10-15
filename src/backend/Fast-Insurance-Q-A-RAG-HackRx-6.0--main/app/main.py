@@ -370,31 +370,14 @@ async def query_documents(
                 llm = get_llm()
                 context_text = "\n\n".join(context_chunks[:3])  # Use top 3 chunks
                 
-                prompt = f"""You are a legal AI assistant analyzing a case. Based on the legal document context provided, deliver a DIRECT VERDICT for this specific case scenario.
+                prompt = f"""Based on the following legal document context, answer the question accurately and comprehensively in 3-4 sentences. 
 
 Context from legal documents:
 {context_text}
 
 Question: {request.query}
 
-CRITICAL INSTRUCTIONS:
-- This is a REAL case analysis, NOT a hypothetical discussion
-- Provide a DIRECT VERDICT with specific determinations
-- DO NOT say "it appears" or "I will assume" or provide general principles
-- Analyze THIS SPECIFIC CASE and deliver a concrete verdict
-- Use the EXACT format below with all sections
-
-FORMAT YOUR RESPONSE EXACTLY AS:
-
-CASE TYPE: [Criminal/Civil/Constitutional]
-
-VERDICT: [Guilty/Not Guilty/Liable/Not Liable - be specific and direct]
-
-SENTENCING: [Specific sentence with IPC sections, imprisonment duration, fines. Be concrete: "The accused shall be sentenced to imprisonment for X years under Section Y of the IPC"]
-
-LEGAL BASIS: [Cite specific Constitutional Articles, IPC Sections, and landmark Supreme Court cases with case names and years. Example: "Article 21 of the Constitution, Section 302 IPC, as established in Machhi Singh v. State of Punjab (1983)"]
-
-CONFIDENCE: [X% based on specific precedents and legal provisions cited]"""
+Provide a professional legal analysis in 3-4 sentences. Focus on relevant legal principles, precedents, and applicable provisions from the context."""
                 
                 answer = llm.invoke(prompt).content
                 
@@ -423,34 +406,29 @@ CONFIDENCE: [X% based on specific precedents and legal provisions cited]"""
             # Using Constitution of India and broader legal knowledge
             llm = get_llm()
             
-            prompt = f"""You are a legal AI assistant with comprehensive knowledge of Indian law and the Constitution of India. Analyze this case and deliver a DIRECT VERDICT.
+            prompt = f"""You are an AI legal assistant with comprehensive knowledge of Indian law and the Constitution of India.
 
 Question: {request.query}
 
-CRITICAL INSTRUCTIONS:
-- This is a REAL case analysis requiring a DIRECT VERDICT
-- DO NOT provide general legal principles or hypothetical discussions
-- DO NOT say "it appears" or "I will assume" or "the question pertains to"
-- Analyze THIS SPECIFIC CASE SCENARIO and deliver a concrete verdict
-- Base your analysis on:
-  * The Constitution of India
-  * Indian Penal Code (IPC) and relevant statutes
-  * Landmark Supreme Court and High Court judgments
-  * Established legal principles and precedents
+Provide a professional legal analysis based on:
+- The Constitution of India
+- Indian Penal Code (IPC) and relevant statutes
+- Landmark Supreme Court and High Court judgments
+- Established legal principles and precedents
 
-FORMAT YOUR RESPONSE EXACTLY AS:
-
-CASE TYPE: [Criminal/Civil/Constitutional]
-
-VERDICT: [Guilty/Not Guilty/Liable/Not Liable - be specific and direct for THIS case]
-
-SENTENCING: [Specific sentence with IPC sections, imprisonment duration, fines. Be concrete: "The accused shall be sentenced to imprisonment for X years under Section Y of the IPC"]
-
-LEGAL BASIS: [Cite specific Constitutional Articles (e.g., Article 21), IPC Sections (e.g., Section 302), and landmark cases with names and years (e.g., Machhi Singh v. State of Punjab (1983))]
-
-CONFIDENCE: [X% based on the specific precedents and legal provisions cited above]"""
-
+Answer in 3-4 sentences with specific legal references where applicable."""
+            
             answer = llm.invoke(prompt).content
+            
+            return {
+                "status": "success",
+                "query": request.query,
+                "answer": answer,
+                "document_id": None,
+                "chunks_used": 0,
+                "sources": []
+            }
+=======
 
     except Exception as e:
         print(f"Query error: {str(e)}")

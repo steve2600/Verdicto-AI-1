@@ -196,8 +196,6 @@ export const analyzeQuery = action({
       }
 
       // Send to RAG backend for analysis using dedicated query endpoint
-      // Note: Temporarily not sending document_id due to naming convention mismatch
-      // The backend will fall back to general legal knowledge (Constitution of India)
       const response = await fetch(`${RAG_BACKEND_URL}/api/v1/documents/query`, {
         method: "POST",
         headers: {
@@ -206,7 +204,7 @@ export const analyzeQuery = action({
         },
         body: JSON.stringify({
           query: enhancedQuery,
-          // document_id: documentId, // Commented out until backend is redeployed with new naming
+          document_id: documentId,
         }),
       });
 

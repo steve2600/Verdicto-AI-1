@@ -1,26 +1,11 @@
-def detect_document_bias(case_text, threshold=0.15):
-    # Tokenize input
-    inputs = tokenizer(case_text, max_length=512, truncation=True)
-    
-    # Get model predictions (7 outputs for 7 bias types)
-    outputs = model(**inputs)
-    probabilities = torch.sigmoid(outputs.logits)
-    
-    # Map to bias categories
-    granular_scores = {
-        "gender_bias": probabilities[0],
-        "caste_bias": probabilities[1],
-        "religious_bias": probabilities[2],
-        "regional_bias": probabilities[3],
-        "socioeconomic_bias": probabilities[4],
-        "judicial_attitude_bias": probabilities[5],
-        "language_bias": probabilities[6]
-    }
-    
-    # Calculate overall bias (average of all categories)
-    overall_bias = sum(granular_scores.values()) / 7
-    
-    return {
-        "overall_bias_score": overall_bias,
-        "granular_scores": granular_scores
-    }
+import os
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8001))  # Use Railway's PORT or default to 8001
+    uvicorn.run(
+        "api:app",
+        host="0.0.0.0",
+        port=port,
+        reload=True,
+        log_level="info"
+    )
