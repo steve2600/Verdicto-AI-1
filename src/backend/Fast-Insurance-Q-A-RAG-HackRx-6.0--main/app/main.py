@@ -370,14 +370,22 @@ async def query_documents(
                 llm = get_llm()
                 context_text = "\n\n".join(context_chunks[:3])  # Use top 3 chunks
                 
-                prompt = f"""Based on the following legal document context, answer the question accurately and comprehensively in 3-4 sentences. 
+                prompt = f"""You are a legal expert analyzing a specific case. Based on the legal document context provided, deliver a direct verdict and analysis for this case.
 
 Context from legal documents:
 {context_text}
 
-Question: {request.query}
+Case Query: {request.query}
 
-Provide a professional legal analysis in 3-4 sentences. Focus on relevant legal principles, precedents, and applicable provisions from the context."""
+Provide your analysis in this exact format:
+
+CASE TYPE: [Identify the specific type - Criminal/Civil/Constitutional]
+VERDICT: [State the direct verdict - Guilty/Not Guilty/Liable/Not Liable/Convicted/Acquitted]
+SENTENCING: [Provide specific sentencing with exact legal provisions, sections, and imprisonment duration. For criminal cases, specify IPC sections and punishment duration]
+LEGAL BASIS: [Explain the legal reasoning with relevant Constitutional articles, IPC sections, and landmark Supreme Court precedents like Machhi Singh v. State of Punjab (1983)]
+CONFIDENCE: [Provide confidence percentage based on precedents and legal provisions cited]
+
+Analyze the specific case scenario presented and provide a direct verdict with detailed legal justification."""
                 
                 answer = llm.invoke(prompt).content
                 
@@ -406,32 +414,36 @@ Provide a professional legal analysis in 3-4 sentences. Focus on relevant legal 
             # Using Constitution of India and broader legal knowledge
             llm = get_llm()
             
-            prompt = f"""You are an AI legal assistant with comprehensive knowledge of Indian law and the Constitution of India.
+            prompt = f"""You are a legal expert delivering a verdict for a specific case based on Indian law.
 
-Question: {request.query}
+Case Query: {request.query}
 
-Provide a professional legal analysis based on:
-- The Constitution of India
-- Indian Penal Code (IPC) and relevant statutes
-- Landmark Supreme Court and High Court judgments
-- Established legal principles and precedents
+Analyze this case and provide your verdict in this exact format:
 
-Answer in 3-4 sentences with specific legal references where applicable."""
+CASE TYPE: [Identify the specific type - Criminal/Civil/Constitutional]
+VERDICT: [State the direct verdict - Guilty/Not Guilty/Liable/Not Liable/Convicted/Acquitted]
+SENTENCING: [Provide specific sentencing with exact IPC sections and punishment duration. For murder cases, cite Section 302 IPC and specify imprisonment duration]
+LEGAL BASIS: [Explain with specific Constitutional articles (e.g., Article 21), IPC sections (e.g., Section 302, 300, 299), and landmark cases like Machhi Singh v. State of Punjab (1983), Bachan Singh v. State of Punjab (1980)]
+CONFIDENCE: [Provide confidence percentage based on the precedents and legal provisions cited]
+
+Base your verdict on:
+- Constitution of India (especially Article 21 - Right to Life)
+- Indian Penal Code sections for the specific offense
+- Landmark Supreme Court judgments
+- Established sentencing guidelines
+
+Provide a direct, specific verdict for the case scenario presented."""
             
             answer = llm.invoke(prompt).content
             
             return {
                 "status": "success",
-    except Exception as e:
-=======
                 "query": request.query,
                 "answer": answer,
                 "document_id": None,
                 "chunks_used": 0,
                 "sources": []
             }
-
-    except Exception as e:
 =======
 
     except Exception as e:

@@ -1,1 +1,1 @@
-ls -la scripts/
+node batch-ingest-legal-cases.js
