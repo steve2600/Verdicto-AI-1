@@ -5,6 +5,7 @@ load_dotenv()
 from fastapi import FastAPI, HTTPException, Header, BackgroundTasks
 from pydantic import BaseModel
 from typing import List, Optional
+from contextlib import asynccontextmanager
 import tempfile
 import os
 import gc
@@ -18,9 +19,28 @@ from weaviate.classes.query import HybridFusion
 from fastapi.concurrency import run_in_threadpool
 import httpx
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    print("✅ RAG Backend started successfully (reranking disabled)")
+    yield
+    # Shutdown
+    cleanup_client()
+
+app = FastAPI(lifespan=lifespan)
 
 TEAM_TOKEN = "8ad62148045cbf8137a66e1d8c0974e14f62a970b4fa91afb850f461abfbadb8"
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+@app.on_event("startup")
+async def startup_event():
+    print("✅ RAG Backend started successfully (reranking disabled)")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    cleanup_client()
+=======
+# Lifespan events handled by asynccontextmanager above
 
 SEM_LIMIT = 10
 semaphore = asyncio.Semaphore(SEM_LIMIT)
@@ -188,9 +208,9 @@ async def ingest_document(
         
         print(f"✅ Extracted {len(docs)} document chunks")
 
-        # Create QA chain (this ingests into Weaviate)
+        # Create QA chain (this ingests into Weaviate with deterministic naming)
         print(f"🔗 Creating QA chain and ingesting into Weaviate...")
-        qa, cleanup_fn, collection_name = await get_ultra_fast_qa_chain(docs, return_collection_name=True)
+        qa, cleanup_fn, collection_name = await get_ultra_fast_qa_chain(docs, return_collection_name=True, document_id=request.document_id)
         
         print(f"✅ Document ingested successfully into vector store: {collection_name}")
         
@@ -243,6 +263,7 @@ async def ingest_document(
             "title": request.title,
             "error": error_msg
         }
+        # Return the actual error message to the client
         raise HTTPException(status_code=500, detail=error_msg)
     finally:
         if temp_pdf_path:
@@ -281,7 +302,6 @@ async def query_documents(
                 collection_name = doc_info.get("collection_name")
             else:
                 # Document not in store - try to use the document_id directly as collection name
-                # This handles documents uploaded in previous sessions
                 collection_name = f"Document_{request.document_id}"
                 print(f"⚠️ Document {request.document_id} not in store, attempting to query collection: {collection_name}")
             
@@ -304,33 +324,112 @@ async def query_documents(
                     fusion_type=HybridFusion.RANKED
                 )
                 
-                # Extract relevant context
+                # Extract relevant context with metadata
                 context_chunks = []
+                sources = []
                 for item in response.objects:
                     text = item.properties.get("text", "")
                     if text and len(text) > 100:
                         context_chunks.append(text)
+                        page_num = None
+                        
+                        if hasattr(item, 'metadata') and hasattr(item.metadata, 'page'):
+                            page_num = item.metadata.page
+                        elif 'page' in item.properties:
+                            page_num = item.properties['page']
+                        elif 'metadata' in item.properties and isinstance(item.properties['metadata'], dict):
+                            page_num = item.properties['metadata'].get('page')
+                        
+                        case_title = "Related Legal Precedent"
+                        case_citation = None
+                        
+                        lines = text.split('\n')
+                        if lines:
+                            first_line = lines[0].strip()
+                            if len(first_line) > 10 and len(first_line) < 200:
+                                case_title = first_line
+                        
+                        import re
+                        citation_patterns = [
+                            r'(\d{4}\s+\w+\s+\d+)',
+                            r'(AIR\s+\d{4}\s+\w+\s+\d+)',
+                            r'(\(\d{4}\)\s+\d+\s+\w+\s+\d+)',
+                        ]
+                        for pattern in citation_patterns:
+                            match = re.search(pattern, text[:500])
+                            if match:
+                                case_citation = match.group(1)
+                                break
+                        
+                        sources.append({
+                            "document_id": request.document_id,
+                            "page": page_num if page_num else None,
+                            "case_title": case_title,
+                            "case_citation": case_citation,
+                            "content": text[:300] + "..." if len(text) > 300 else text,
+                            "score": getattr(item.metadata, "score", 0.8),
+                            "relevance": "High" if getattr(item.metadata, "score", 0.8) > 0.85 else "Medium"
+                        })
                 
                 if not context_chunks:
+                    # Fall back to Constitution of India and general knowledge
+                    llm = get_llm()
+                    prompt = f"""You are a legal AI assistant specialized in Indian law and the Constitution of India. 
+Analyze the following query and provide a comprehensive legal analysis based on Indian legal context, the Constitution of India, and relevant legal precedents.
+
+Query: {request.query}
+
+IMPORTANT INSTRUCTIONS:
+1. Base your analysis on the Constitution of India and Indian legal framework
+2. Search for and reference similar cases from Indian legal history
+3. Provide specific verdict determination (guilty/not guilty, bail granted/denied, win probability, etc.)
+4. Include relevant legal provisions, sections, and articles
+5. Provide sentencing recommendations or outcome predictions based on similar precedents
+6. Format your response as:
+   CASE TYPE: [Type of case]
+   VERDICT: [Clear verdict determination]
+   SENTENCING/OUTCOME: [Specific recommendations or predictions]
+   LEGAL BASIS: [Relevant laws, sections, precedents]
+   CONFIDENCE: [Percentage based on precedent strength]
+
+Provide a direct, specific verdict for this case based on Indian legal context."""
+                    
+                    answer = llm.invoke(prompt).content
+                    
                     return {
                         "status": "success",
                         "query": request.query,
-                        "answer": "I couldn't find relevant information in the selected document to answer your question.",
-                        "document_id": request.document_id
+                        "answer": answer,
+                        "document_id": None,
+                        "sources": [],
+                        "note": "Analysis based on Constitution of India and general Indian legal knowledge"
                     }
                 
                 # Generate answer using LLM with context
                 llm = get_llm()
-                context_text = "\n\n".join(context_chunks[:3])  # Use top 3 chunks
+                context_text = "\n\n".join(context_chunks[:3])
                 
-                prompt = f"""Based on the following document context, answer the question accurately and comprehensively in 3-4 sentences.
+                prompt = f"""You are a legal AI assistant specialized in Indian law. Based on the following legal document context from Indian legal precedents, provide a comprehensive analysis.
 
-Context from document:
+Context from legal documents:
 {context_text}
 
-Question: {request.query}
+Query: {request.query}
 
-Answer (3-4 sentences, professional legal tone):"""
+IMPORTANT INSTRUCTIONS:
+1. Analyze this specific case scenario based on the provided context and Indian legal framework
+2. Provide a DIRECT VERDICT determination (guilty/not guilty, bail granted/denied, win probability percentage, etc.)
+3. Include specific sentencing recommendations or outcome predictions based on similar cases
+4. Reference relevant legal provisions, sections, and articles from Indian law
+5. Override any hypothetical scenario conditions - provide a direct verdict for THIS specific case
+6. Format your response as:
+   CASE TYPE: [Type of case]
+   VERDICT: [Clear verdict determination with specifics]
+   SENTENCING/OUTCOME: [Specific recommendations, years of imprisonment, or win probability percentage]
+   LEGAL BASIS: [Relevant laws, sections, precedents from context]
+   CONFIDENCE: [Percentage based on precedent strength]
+
+Provide a direct, specific verdict for this case based on the Indian legal context and precedents provided."""
                 
                 answer = llm.invoke(prompt).content
                 
@@ -339,26 +438,76 @@ Answer (3-4 sentences, professional legal tone):"""
                     "query": request.query,
                     "answer": answer,
                     "document_id": request.document_id,
-                    "chunks_used": len(context_chunks)
+                    "chunks_used": len(context_chunks),
+                    "sources": sources[:3]
                 }
             except Exception as collection_error:
-                # Collection doesn't exist or query failed
                 print(f"❌ Failed to query collection {collection_name}: {str(collection_error)}")
+                # Fall back to Constitution of India and general knowledge
+                llm = get_llm()
+                prompt = f"""You are a legal AI assistant specialized in Indian law and the Constitution of India. 
+Analyze the following query and provide a comprehensive legal analysis based on Indian legal context.
+
+Query: {request.query}
+
+IMPORTANT INSTRUCTIONS:
+1. Base your analysis on the Constitution of India and Indian legal framework
+2. Search for and reference similar cases from Indian legal history
+3. Provide specific verdict determination (guilty/not guilty, bail granted/denied, win probability, etc.)
+4. Include relevant legal provisions, sections, and articles
+5. Provide sentencing recommendations or outcome predictions based on similar precedents
+6. Format your response as:
+   CASE TYPE: [Type of case]
+   VERDICT: [Clear verdict determination]
+   SENTENCING/OUTCOME: [Specific recommendations or predictions]
+   LEGAL BASIS: [Relevant laws, sections, precedents]
+   CONFIDENCE: [Percentage based on precedent strength]
+
+Provide a direct, specific verdict for this case based on Indian legal context."""
+                
+                answer = llm.invoke(prompt).content
+                
                 return {
-                    "status": "error",
+                    "status": "success",
                     "query": request.query,
-                    "answer": f"The selected document needs to be re-uploaded and processed. Please upload it again from the Document Library. Error: Document collection not found in vector store.",
-                    "document_id": request.document_id
+                    "answer": answer,
+                    "document_id": None,
+                    "sources": [],
+                    "note": "Analysis based on Constitution of India and general Indian legal knowledge"
                 }
         
         else:
-            # No document selected - query across all documents (if any exist)
-            # For now, return a helpful message
+            # No document selected - use Constitution of India and general knowledge
+            llm = get_llm()
+            prompt = f"""You are a legal AI assistant specialized in Indian law and the Constitution of India. 
+Analyze the following query and provide a comprehensive legal analysis based on Indian legal context.
+
+Query: {request.query}
+
+IMPORTANT INSTRUCTIONS:
+1. Base your analysis on the Constitution of India and Indian legal framework
+2. Search for and reference similar cases from Indian legal history
+3. Provide specific verdict determination (guilty/not guilty, bail granted/denied, win probability, etc.)
+4. Include relevant legal provisions, sections, and articles
+5. Provide sentencing recommendations or outcome predictions based on similar precedents
+6. Format your response as:
+   CASE TYPE: [Type of case]
+   VERDICT: [Clear verdict determination]
+   SENTENCING/OUTCOME: [Specific recommendations or predictions]
+   LEGAL BASIS: [Relevant laws, sections, precedents]
+   CONFIDENCE: [Percentage based on precedent strength]
+
+Provide a direct, specific verdict for this case based on Indian legal context."""
+            
+            answer = llm.invoke(prompt).content
+            
             return {
                 "status": "success",
                 "query": request.query,
-                "answer": "Please select a specific document from your Document Library to get context-aware answers. Without a document selected, I cannot provide accurate legal analysis.",
-                "document_id": None
+                "answer": answer,
+                "document_id": None,
+                "sources": [],
+                "note": "Analysis based on Constitution of India and general Indian legal knowledge"
             }
 
     except Exception as e:
