@@ -11,6 +11,7 @@ import os
 import gc
 import asyncio
 import time
+import re
 
 from app.utils import load_pdf_ultra_fast, cleanup_temp_files
 from app.qa_chain import get_ultra_fast_qa_chain, cleanup_client, get_weaviate_client, get_embeddings, get_llm
@@ -199,7 +200,7 @@ async def ingest_document(
         print(f"✅ Extracted {len(docs)} document chunks")
 
         # Create QA chain (this ingests into Weaviate with deterministic naming)
-        print(f"🔗 Creating QA chain and ingesting into Weaviate...")
+        print(f"🔗 Creating QA chain and ingesting into Weaviate with document_id='{request.document_id}'")
         qa, cleanup_fn, collection_name = await get_ultra_fast_qa_chain(docs, return_collection_name=True, document_id=request.document_id)
         
         print(f"✅ Document ingested successfully into vector store: {collection_name}")
@@ -295,7 +296,9 @@ async def query_documents(
                 collection_name = doc_info.get("collection_name")
             else:
                 # Document not in store - try to use the document_id directly as collection name
-                collection_name = f"Document_{request.document_id}"
+                # Sanitize to ensure valid Weaviate collection name (alphanumeric + underscore)
+                safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', str(request.document_id))
+                collection_name = f"Document_{safe_id}"
                 print(f"⚠️ Document {request.document_id} not in store, attempting to query collection: {collection_name}")
             
             if not collection_name:

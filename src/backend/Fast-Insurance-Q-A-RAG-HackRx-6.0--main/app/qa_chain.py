@@ -276,6 +276,7 @@ def get_unique_collection_name(document_id: str = None):
 
 async def create_ultra_fast_vectorstore(docs: List[Document], document_id: str = None):
     """Create vectorstore with optional deterministic naming"""
+    print(f"DEBUG: create_ultra_fast_vectorstore called with document_id='{document_id}'")
     collection_name = get_unique_collection_name(document_id)
     embeddings = get_embeddings()
     
@@ -314,6 +315,7 @@ def get_cleanup_wrapper(collection_name: str):
 
 
 async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = True, return_collection_name: bool = False, document_id: str = None):
+    print(f"DEBUG: get_ultra_fast_qa_chain called with document_id='{document_id}'")
     k = get_ultra_fast_k(len(docs))
     temp_vectorstore, collection_name = await create_ultra_fast_vectorstore(docs, document_id)
     llm = get_llm()
