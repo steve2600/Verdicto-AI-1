@@ -30,18 +30,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 TEAM_TOKEN = "8ad62148045cbf8137a66e1d8c0974e14f62a970b4fa91afb850f461abfbadb8"
->>>>>>> REPLACE
-<<<<<<< SEARCH
-@app.on_event("startup")
-async def startup_event():
-    print("✅ RAG Backend started successfully (reranking disabled)")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    cleanup_client()
-=======
-# Lifespan events handled by asynccontextmanager above
-
 SEM_LIMIT = 10
 semaphore = asyncio.Semaphore(SEM_LIMIT)
 
@@ -317,11 +305,12 @@ async def query_documents(
                 
                 # Perform hybrid search on the specific document
                 # Increased limit and adjusted alpha for better semantic matching
+                print(f"🔍 Querying collection: {collection_name} with query: {request.query}")
                 response = collection.query.hybrid(
                     query=request.query,
                     vector=query_vector,
-                    limit=8,
-                    alpha=0.5,
+                    limit=15,
+                    alpha=0.25,
                     fusion_type=HybridFusion.RANKED
                 )
                 
@@ -331,80 +320,6 @@ async def query_documents(
                 context_chunks = []
                 sources = []
                 for item in response.objects:
->>>>>>> REPLACE
-<<<<<<< SEARCH
-                if not context_chunks:
-                    # Fall back to Constitution of India and general knowledge
-                    llm = get_llm()
-                    prompt = f"""You are a legal AI assistant specialized in Indian law and the Constitution of India. 
-Analyze the following query and provide a comprehensive legal analysis based on Indian legal context, the Constitution of India, and relevant legal precedents.
-
-Query: {request.query}
-
-IMPORTANT INSTRUCTIONS:
-=======
-                if not context_chunks:
-                    # Fall back to Constitution of India and general knowledge
-                    llm = get_llm()
-                    prompt = f"""You are a legal AI assistant specialized in Indian law. 
-I could not find specific matches in the uploaded document, so I will answer based on general Indian legal knowledge and the Constitution.
-
-Query: {request.query}
-
-IMPORTANT INSTRUCTIONS:
->>>>>>> REPLACE
-<<<<<<< SEARCH
-                # Generate answer using LLM with context
-                llm = get_llm()
-                context_text = "\n\n".join(context_chunks[:3])
-                
-                prompt = f"""You are a legal AI assistant specialized in Indian law. Based on the following legal document context from Indian legal precedents, provide a comprehensive analysis.
-
-Context from legal documents:
-{context_text}
-
-Query: {request.query}
-
-IMPORTANT INSTRUCTIONS:
-1. Analyze this specific case scenario based on the provided context and Indian legal framework
-2. Provide a DIRECT VERDICT determination (guilty/not guilty, bail granted/denied, win probability percentage, etc.)
-3. Include specific sentencing recommendations or outcome predictions based on similar cases
-4. Reference relevant legal provisions, sections, and articles from Indian law
-5. Override any hypothetical scenario conditions - provide a direct verdict for THIS specific case
-6. Format your response as:
-   CASE TYPE: [Type of case]
-   VERDICT: [Clear verdict determination with specifics]
-   SENTENCING/OUTCOME: [Specific recommendations, years of imprisonment, or win probability percentage]
-   LEGAL BASIS: [Relevant laws, sections, precedents from context]
-   CONFIDENCE: [Percentage based on precedent strength]
-
-Provide a direct, specific verdict for this case based on the Indian legal context and precedents provided."""
-=======
-                # Generate answer using LLM with context
-                llm = get_llm()
-                # Use more context chunks (up to 6)
-                context_text = "\n\n".join(context_chunks[:6])
-                
-                prompt = f"""You are a legal AI assistant specialized in Indian law. Based on the following legal document context, provide a comprehensive analysis.
-
-Context from legal documents:
-{context_text}
-
-Query: {request.query}
-
-IMPORTANT INSTRUCTIONS:
-1. Analyze the query using the provided context.
-2. If the context contains relevant information, use it to answer the query.
-3. If the context is only partially relevant, use it along with your general legal knowledge to provide the best possible answer.
-4. Provide a DIRECT VERDICT determination (guilty/not guilty, bail granted/denied, win probability percentage, etc.)
-5. Format your response as:
-   CASE TYPE: [Type of case]
-   VERDICT: [Clear verdict determination with specifics]
-   SENTENCING/OUTCOME: [Specific recommendations, years of imprisonment, or win probability percentage]
-   LEGAL BASIS: [Relevant laws, sections, precedents from context]
-   CONFIDENCE: [Percentage based on precedent strength]
-
-Provide a direct, specific verdict for this case."""
                     text = item.properties.get("text", "")
                     if text and len(text) > 100:
                         context_chunks.append(text)
@@ -451,8 +366,8 @@ Provide a direct, specific verdict for this case."""
                 if not context_chunks:
                     # Fall back to Constitution of India and general knowledge
                     llm = get_llm()
-                    prompt = f"""You are a legal AI assistant specialized in Indian law and the Constitution of India. 
-Analyze the following query and provide a comprehensive legal analysis based on Indian legal context, the Constitution of India, and relevant legal precedents.
+                    prompt = f"""You are a legal AI assistant specialized in Indian law. 
+I could not find specific matches in the uploaded document, so I will answer based on general Indian legal knowledge and the Constitution.
 
 Query: {request.query}
 
@@ -484,9 +399,10 @@ Provide a direct, specific verdict for this case based on Indian legal context."
                 
                 # Generate answer using LLM with context
                 llm = get_llm()
-                context_text = "\n\n".join(context_chunks[:3])
+                # Use more context chunks (up to 10)
+                context_text = "\n\n".join(context_chunks[:10])
                 
-                prompt = f"""You are a legal AI assistant specialized in Indian law. Based on the following legal document context from Indian legal precedents, provide a comprehensive analysis.
+                prompt = f"""You are a legal AI assistant specialized in Indian law. Based on the following legal document context, provide a comprehensive analysis.
 
 Context from legal documents:
 {context_text}
@@ -494,19 +410,18 @@ Context from legal documents:
 Query: {request.query}
 
 IMPORTANT INSTRUCTIONS:
-1. Analyze this specific case scenario based on the provided context and Indian legal framework
-2. Provide a DIRECT VERDICT determination (guilty/not guilty, bail granted/denied, win probability percentage, etc.)
-3. Include specific sentencing recommendations or outcome predictions based on similar cases
-4. Reference relevant legal provisions, sections, and articles from Indian law
-5. Override any hypothetical scenario conditions - provide a direct verdict for THIS specific case
-6. Format your response as:
+1. Analyze the query using the provided context.
+2. YOU MUST USE THE CONTEXT PROVIDED to answer the question, even if it seems only tangentially related.
+3. If the context contains ANY relevant keywords or concepts, construct the best possible answer from them.
+4. Provide a DIRECT VERDICT determination (guilty/not guilty, bail granted/denied, win probability percentage, etc.)
+5. Format your response as:
    CASE TYPE: [Type of case]
    VERDICT: [Clear verdict determination with specifics]
    SENTENCING/OUTCOME: [Specific recommendations, years of imprisonment, or win probability percentage]
    LEGAL BASIS: [Relevant laws, sections, precedents from context]
    CONFIDENCE: [Percentage based on precedent strength]
 
-Provide a direct, specific verdict for this case based on the Indian legal context and precedents provided."""
+Provide a direct, specific verdict for this case using the provided context."""
                 
                 answer = llm.invoke(prompt).content
                 
