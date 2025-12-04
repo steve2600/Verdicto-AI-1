@@ -7,77 +7,6 @@ import re
 from datetime import datetime
 from typing import List
 from dotenv import load_dotenv
->>>>>>> REPLACE
-<<<<<<< SEARCH
-def get_weaviate_client():
-    """Lazy initialization of Weaviate client"""
-    global _weaviate_client
-    
-    if _weaviate_client is not None:
-        return _weaviate_client
-    
-    try:
-        _weaviate_client = weaviate.connect_to_weaviate_cloud(
-            cluster_url=weaviate_url,
-            auth_credentials=Auth.api_key(weaviate_api_key) if weaviate_api_key else None,
-            timeout_config=(10, 60)
-        )
-        print("✅ Weaviate client connected successfully")
-    except Exception as e:
-        print(f"⚠️ Weaviate connection failed, retrying without timeout config: {e}")
-        try:
-            _weaviate_client = weaviate.connect_to_weaviate_cloud(
-                cluster_url=weaviate_url,
-                auth_credentials=Auth.api_key(weaviate_api_key) if weaviate_api_key else None
-            )
-            print("✅ Weaviate client connected successfully (retry)")
-        except Exception as retry_error:
-            print(f"❌ Weaviate connection failed: {retry_error}")
-            raise RuntimeError(f"Failed to connect to Weaviate: {retry_error}")
-    
-    return _weaviate_client
-=======
-def get_weaviate_client():
-    """Lazy initialization of Weaviate client"""
-    global _weaviate_client
-    
-    if _weaviate_client is not None:
-        return _weaviate_client
-    
-    try:
-        # Removed timeout_config as it causes issues with some client versions
-        _weaviate_client = weaviate.connect_to_weaviate_cloud(
-            cluster_url=weaviate_url,
-            auth_credentials=Auth.api_key(weaviate_api_key) if weaviate_api_key else None
-        )
-        print("✅ Weaviate client connected successfully")
-    except Exception as e:
-        print(f"❌ Weaviate connection failed: {e}")
-        raise RuntimeError(f"Failed to connect to Weaviate: {e}")
-    
-    return _weaviate_client
->>>>>>> REPLACE
-<<<<<<< SEARCH
-def get_unique_collection_name(document_id: str = None):
-    """Generate collection name - deterministic if document_id provided"""
-    if document_id:
-        # Use document_id for deterministic naming (survives restarts)
-        return f"Document_{document_id}"
-    else:
-        # Fallback to unique name for temporary collections
-        return f"FastDoc_{int(datetime.now().timestamp())}_{str(uuid.uuid4())[:6]}"
-=======
-def get_unique_collection_name(document_id: str = None):
-    """Generate collection name - deterministic if document_id provided"""
-    print(f"DEBUG: get_unique_collection_name called with document_id='{document_id}'")
-    if document_id:
-        # Use document_id for deterministic naming (survives restarts)
-        # Sanitize to ensure valid Weaviate collection name (alphanumeric + underscore)
-        safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', str(document_id))
-        return f"Document_{safe_id}"
-    else:
-        # Fallback to unique name for temporary collections
-        return f"FastDoc_{int(datetime.now().timestamp())}_{str(uuid.uuid4())[:6]}"
 from starlette.concurrency import run_in_threadpool
 
 from langchain.chains import RetrievalQA
@@ -188,23 +117,15 @@ def get_weaviate_client():
         return _weaviate_client
     
     try:
+        # Removed timeout_config as it causes issues with some client versions
         _weaviate_client = weaviate.connect_to_weaviate_cloud(
             cluster_url=weaviate_url,
-            auth_credentials=Auth.api_key(weaviate_api_key) if weaviate_api_key else None,
-            timeout_config=(10, 60)
+            auth_credentials=Auth.api_key(weaviate_api_key) if weaviate_api_key else None
         )
         print("✅ Weaviate client connected successfully")
     except Exception as e:
-        print(f"⚠️ Weaviate connection failed, retrying without timeout config: {e}")
-        try:
-            _weaviate_client = weaviate.connect_to_weaviate_cloud(
-                cluster_url=weaviate_url,
-                auth_credentials=Auth.api_key(weaviate_api_key) if weaviate_api_key else None
-            )
-            print("✅ Weaviate client connected successfully (retry)")
-        except Exception as retry_error:
-            print(f"❌ Weaviate connection failed: {retry_error}")
-            raise RuntimeError(f"Failed to connect to Weaviate: {retry_error}")
+        print(f"❌ Weaviate connection failed: {e}")
+        raise RuntimeError(f"Failed to connect to Weaviate: {e}")
     
     return _weaviate_client
 
@@ -342,9 +263,12 @@ async def ultra_fast_upload(vectorstore_instance, docs: List[Document]):
 
 def get_unique_collection_name(document_id: str = None):
     """Generate collection name - deterministic if document_id provided"""
+    print(f"DEBUG: get_unique_collection_name called with document_id='{document_id}'")
     if document_id:
         # Use document_id for deterministic naming (survives restarts)
-        return f"Document_{document_id}"
+        # Sanitize to ensure valid Weaviate collection name (alphanumeric + underscore)
+        safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', str(document_id))
+        return f"Document_{safe_id}"
     else:
         # Fallback to unique name for temporary collections
         return f"FastDoc_{int(datetime.now().timestamp())}_{str(uuid.uuid4())[:6]}"
