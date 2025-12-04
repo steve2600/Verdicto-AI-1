@@ -307,6 +307,14 @@ async def query_documents(
             try:
                 # Query the specific document's collection
                 weaviate_client = get_weaviate_client()
+                
+                # Verify collection exists before querying
+                if not weaviate_client.collections.exists(collection_name):
+                    print(f"❌ Collection {collection_name} does not exist in Weaviate!")
+                    # If persistent collection is missing, it might have been deleted or never created
+                    # Fallback to general knowledge immediately
+                    raise Exception(f"Collection {collection_name} not found")
+
                 collection = weaviate_client.collections.get(collection_name)
                 embeddings = get_embeddings()
                 query_vector = embeddings.embed_query(request.query)

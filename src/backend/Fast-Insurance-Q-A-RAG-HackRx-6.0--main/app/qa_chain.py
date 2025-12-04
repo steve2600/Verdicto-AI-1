@@ -264,14 +264,20 @@ async def ultra_fast_upload(vectorstore_instance, docs: List[Document]):
 def get_unique_collection_name(document_id: str = None):
     """Generate collection name - deterministic if document_id provided"""
     print(f"DEBUG: get_unique_collection_name called with document_id='{document_id}'")
-    if document_id:
+    
+    # Ensure document_id is treated as a string and is not None/Empty
+    if document_id and str(document_id).strip() and str(document_id).lower() != "none":
         # Use document_id for deterministic naming (survives restarts)
         # Sanitize to ensure valid Weaviate collection name (alphanumeric + underscore)
         safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', str(document_id))
-        return f"Document_{safe_id}"
+        name = f"Document_{safe_id}"
+        print(f"DEBUG: Using persistent collection name: {name}")
+        return name
     else:
         # Fallback to unique name for temporary collections
-        return f"FastDoc_{int(datetime.now().timestamp())}_{str(uuid.uuid4())[:6]}"
+        name = f"FastDoc_{int(datetime.now().timestamp())}_{str(uuid.uuid4())[:6]}"
+        print(f"DEBUG: Using temporary collection name: {name}")
+        return name
 
 
 async def create_ultra_fast_vectorstore(docs: List[Document], document_id: str = None):
