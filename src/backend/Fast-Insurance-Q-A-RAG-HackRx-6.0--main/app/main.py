@@ -164,6 +164,8 @@ async def ingest_document(
     temp_pdf_path = None
     
     try:
+        print(f"📥 Received ingestion request for document_id: '{request.document_id}'")
+        
         # Update status to processing
         document_store[request.document_id] = {
             "status": "processing",
@@ -211,12 +213,15 @@ async def ingest_document(
             "completed_at": time.time()
         }
 
-        if cleanup_fn:
-            background_tasks.add_task(cleanup_fn)
+        # Disable cleanup for persistent documents so they can be queried later
+        # if cleanup_fn:
+        #     background_tasks.add_task(cleanup_fn)
+        print(f"⚠️ Skipping cleanup for persistent document: {request.document_id}")
 
         return {
             "status": "success",
             "document_id": request.document_id,
+            "collection_name": collection_name,
             "chunks_processed": len(docs),
             "message": "Document ingested successfully"
         }
@@ -309,8 +314,8 @@ async def query_documents(
                 response = collection.query.hybrid(
                     query=request.query,
                     vector=query_vector,
-                    limit=15,
-                    alpha=0.25,
+                    limit=20,
+                    alpha=0.4,
                     fusion_type=HybridFusion.RANKED
                 )
                 

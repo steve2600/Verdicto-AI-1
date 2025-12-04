@@ -3,9 +3,81 @@ import asyncio
 import time
 import uuid
 import threading
+import re
 from datetime import datetime
 from typing import List
 from dotenv import load_dotenv
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+def get_weaviate_client():
+    """Lazy initialization of Weaviate client"""
+    global _weaviate_client
+    
+    if _weaviate_client is not None:
+        return _weaviate_client
+    
+    try:
+        _weaviate_client = weaviate.connect_to_weaviate_cloud(
+            cluster_url=weaviate_url,
+            auth_credentials=Auth.api_key(weaviate_api_key) if weaviate_api_key else None,
+            timeout_config=(10, 60)
+        )
+        print("✅ Weaviate client connected successfully")
+    except Exception as e:
+        print(f"⚠️ Weaviate connection failed, retrying without timeout config: {e}")
+        try:
+            _weaviate_client = weaviate.connect_to_weaviate_cloud(
+                cluster_url=weaviate_url,
+                auth_credentials=Auth.api_key(weaviate_api_key) if weaviate_api_key else None
+            )
+            print("✅ Weaviate client connected successfully (retry)")
+        except Exception as retry_error:
+            print(f"❌ Weaviate connection failed: {retry_error}")
+            raise RuntimeError(f"Failed to connect to Weaviate: {retry_error}")
+    
+    return _weaviate_client
+=======
+def get_weaviate_client():
+    """Lazy initialization of Weaviate client"""
+    global _weaviate_client
+    
+    if _weaviate_client is not None:
+        return _weaviate_client
+    
+    try:
+        # Removed timeout_config as it causes issues with some client versions
+        _weaviate_client = weaviate.connect_to_weaviate_cloud(
+            cluster_url=weaviate_url,
+            auth_credentials=Auth.api_key(weaviate_api_key) if weaviate_api_key else None
+        )
+        print("✅ Weaviate client connected successfully")
+    except Exception as e:
+        print(f"❌ Weaviate connection failed: {e}")
+        raise RuntimeError(f"Failed to connect to Weaviate: {e}")
+    
+    return _weaviate_client
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+def get_unique_collection_name(document_id: str = None):
+    """Generate collection name - deterministic if document_id provided"""
+    if document_id:
+        # Use document_id for deterministic naming (survives restarts)
+        return f"Document_{document_id}"
+    else:
+        # Fallback to unique name for temporary collections
+        return f"FastDoc_{int(datetime.now().timestamp())}_{str(uuid.uuid4())[:6]}"
+=======
+def get_unique_collection_name(document_id: str = None):
+    """Generate collection name - deterministic if document_id provided"""
+    print(f"DEBUG: get_unique_collection_name called with document_id='{document_id}'")
+    if document_id:
+        # Use document_id for deterministic naming (survives restarts)
+        # Sanitize to ensure valid Weaviate collection name (alphanumeric + underscore)
+        safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', str(document_id))
+        return f"Document_{safe_id}"
+    else:
+        # Fallback to unique name for temporary collections
+        return f"FastDoc_{int(datetime.now().timestamp())}_{str(uuid.uuid4())[:6]}"
 from starlette.concurrency import run_in_threadpool
 
 from langchain.chains import RetrievalQA
@@ -241,6 +313,13 @@ async def ultra_fast_upload(vectorstore_instance, docs: List[Document]):
     if not docs:
         return
 
+    # Ensure all documents have their metadata properly set
+    for doc in docs:
+        if "page" in doc.metadata:
+            print(f"📄 Uploading document chunk with page: {doc.metadata.get('page')}")
+        else:
+            print(f"⚠️ Document chunk missing page metadata")
+
     batch_size = min(128, len(docs))
     semaphore = asyncio.Semaphore(6)
 
@@ -252,7 +331,8 @@ async def ultra_fast_upload(vectorstore_instance, docs: List[Document]):
         async with semaphore:
             try:
                 await run_in_threadpool(vectorstore_instance.add_documents, batch)
-            except:
+            except Exception as e:
+                print(f"❌ Batch upload error: {e}")
                 pass
 
     batches = list(create_batches(docs, batch_size))
@@ -260,13 +340,26 @@ async def ultra_fast_upload(vectorstore_instance, docs: List[Document]):
     await asyncio.gather(*tasks, return_exceptions=True)
 
 
-def get_unique_collection_name():
-    return f"FastDoc_{int(datetime.now().timestamp())}_{str(uuid.uuid4())[:6]}"
+def get_unique_collection_name(document_id: str = None):
+    """Generate collection name - deterministic if document_id provided"""
+    if document_id:
+        # Use document_id for deterministic naming (survives restarts)
+        return f"Document_{document_id}"
+    else:
+        # Fallback to unique name for temporary collections
+        return f"FastDoc_{int(datetime.now().timestamp())}_{str(uuid.uuid4())[:6]}"
 
 
-async def create_ultra_fast_vectorstore(docs: List[Document]):
-    collection_name = get_unique_collection_name()
+async def create_ultra_fast_vectorstore(docs: List[Document], document_id: str = None):
+    """Create vectorstore with optional deterministic naming"""
+    collection_name = get_unique_collection_name(document_id)
     embeddings = get_embeddings()
+    
+    # Ensure all documents have page metadata preserved
+    print(f"📊 Creating vectorstore with {len(docs)} documents")
+    for i, doc in enumerate(docs[:3]):  # Log first 3 for debugging
+        print(f"  Doc {i}: page={doc.metadata.get('page', 'N/A')}, content_length={len(doc.page_content)}")
+    
     temp_vectorstore = WeaviateVectorStore(
         client=get_weaviate_client(),
         index_name=collection_name,
@@ -296,9 +389,9 @@ def get_cleanup_wrapper(collection_name: str):
     return wrapper
 
 
-async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = True, return_collection_name: bool = False):
+async def get_ultra_fast_qa_chain(docs: List[Document], use_reranking: bool = True, return_collection_name: bool = False, document_id: str = None):
     k = get_ultra_fast_k(len(docs))
-    temp_vectorstore, collection_name = await create_ultra_fast_vectorstore(docs)
+    temp_vectorstore, collection_name = await create_ultra_fast_vectorstore(docs, document_id)
     llm = get_llm()
 
     retriever = UltraFastRetriever(
