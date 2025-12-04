@@ -316,18 +316,95 @@ async def query_documents(
                 query_vector = embeddings.embed_query(request.query)
                 
                 # Perform hybrid search on the specific document
+                # Increased limit and adjusted alpha for better semantic matching
                 response = collection.query.hybrid(
                     query=request.query,
                     vector=query_vector,
-                    limit=4,
-                    alpha=0.3,
+                    limit=8,
+                    alpha=0.5,
                     fusion_type=HybridFusion.RANKED
                 )
                 
+                print(f"🔍 Found {len(response.objects)} potential matches")
+
                 # Extract relevant context with metadata
                 context_chunks = []
                 sources = []
                 for item in response.objects:
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+                if not context_chunks:
+                    # Fall back to Constitution of India and general knowledge
+                    llm = get_llm()
+                    prompt = f"""You are a legal AI assistant specialized in Indian law and the Constitution of India. 
+Analyze the following query and provide a comprehensive legal analysis based on Indian legal context, the Constitution of India, and relevant legal precedents.
+
+Query: {request.query}
+
+IMPORTANT INSTRUCTIONS:
+=======
+                if not context_chunks:
+                    # Fall back to Constitution of India and general knowledge
+                    llm = get_llm()
+                    prompt = f"""You are a legal AI assistant specialized in Indian law. 
+I could not find specific matches in the uploaded document, so I will answer based on general Indian legal knowledge and the Constitution.
+
+Query: {request.query}
+
+IMPORTANT INSTRUCTIONS:
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+                # Generate answer using LLM with context
+                llm = get_llm()
+                context_text = "\n\n".join(context_chunks[:3])
+                
+                prompt = f"""You are a legal AI assistant specialized in Indian law. Based on the following legal document context from Indian legal precedents, provide a comprehensive analysis.
+
+Context from legal documents:
+{context_text}
+
+Query: {request.query}
+
+IMPORTANT INSTRUCTIONS:
+1. Analyze this specific case scenario based on the provided context and Indian legal framework
+2. Provide a DIRECT VERDICT determination (guilty/not guilty, bail granted/denied, win probability percentage, etc.)
+3. Include specific sentencing recommendations or outcome predictions based on similar cases
+4. Reference relevant legal provisions, sections, and articles from Indian law
+5. Override any hypothetical scenario conditions - provide a direct verdict for THIS specific case
+6. Format your response as:
+   CASE TYPE: [Type of case]
+   VERDICT: [Clear verdict determination with specifics]
+   SENTENCING/OUTCOME: [Specific recommendations, years of imprisonment, or win probability percentage]
+   LEGAL BASIS: [Relevant laws, sections, precedents from context]
+   CONFIDENCE: [Percentage based on precedent strength]
+
+Provide a direct, specific verdict for this case based on the Indian legal context and precedents provided."""
+=======
+                # Generate answer using LLM with context
+                llm = get_llm()
+                # Use more context chunks (up to 6)
+                context_text = "\n\n".join(context_chunks[:6])
+                
+                prompt = f"""You are a legal AI assistant specialized in Indian law. Based on the following legal document context, provide a comprehensive analysis.
+
+Context from legal documents:
+{context_text}
+
+Query: {request.query}
+
+IMPORTANT INSTRUCTIONS:
+1. Analyze the query using the provided context.
+2. If the context contains relevant information, use it to answer the query.
+3. If the context is only partially relevant, use it along with your general legal knowledge to provide the best possible answer.
+4. Provide a DIRECT VERDICT determination (guilty/not guilty, bail granted/denied, win probability percentage, etc.)
+5. Format your response as:
+   CASE TYPE: [Type of case]
+   VERDICT: [Clear verdict determination with specifics]
+   SENTENCING/OUTCOME: [Specific recommendations, years of imprisonment, or win probability percentage]
+   LEGAL BASIS: [Relevant laws, sections, precedents from context]
+   CONFIDENCE: [Percentage based on precedent strength]
+
+Provide a direct, specific verdict for this case."""
                     text = item.properties.get("text", "")
                     if text and len(text) > 100:
                         context_chunks.append(text)
