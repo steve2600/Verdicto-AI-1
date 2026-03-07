@@ -1,8 +1,9 @@
-# LexAI UI - AI-Powered Legal Assistant
+# Verdicto AI UI - AI-Powered Legal Assistant
+--Worked on InlegalBERT and RAG optimization
 
 **Justice, Accelerated by AI**
 
-LexAI UI is a futuristic, ultra-modern AI-powered legal assistant designed to accelerate justice through transparent, accessible, and unbiased analysis. Built with cutting-edge technologies, it provides AI-driven case predictions, bias detection, legal research capabilities, document management, and comprehensive analysis reports.
+Verdicto AI UI is a futuristic, ultra-modern AI-powered legal assistant designed to accelerate justice through transparent, accessible, and unbiased analysis. Built with cutting-edge technologies, it provides AI-driven case predictions, bias detection, legal research capabilities, document management, and comprehensive analysis reports.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Version](https://img.shields.io/badge/version-2.0.0-green.svg)
